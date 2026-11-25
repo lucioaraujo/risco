@@ -116,7 +116,7 @@ jobs:
               apt-get update
               alsa=libasound2
               case '${{ matrix.image }}' in ubuntu:24.04) alsa=libasound2t64 ;; esac
-              DEBIAN_FRONTEND=noninteractive apt-get install -y xvfb xauth openbox xdotool wmctrl \
+              DEBIAN_FRONTEND=noninteractive apt-get install -y xvfb x11-utils \
                 "$alsa" libfontconfig1 libfreetype6 libx11-6 libxext6 libxcursor1 \
                 libxinerama1 libxrender1 libxrandr2 zlib1g fonts-dejavu-core python3
               if test '${{ matrix.image }}' = debian:12 || test '${{ matrix.image }}' = ubuntu:24.04; then
@@ -124,12 +124,12 @@ jobs:
               fi
               ;;
             fedora:*)
-              dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth openbox xdotool wmctrl python3 \
+              dnf install -y xorg-x11-server-Xvfb xorg-x11-utils python3 \
                 alsa-lib fontconfig freetype libX11 libXext libXcursor libXinerama \
                 libXrender libXrandr zlib dejavu-sans-fonts
               ;;
             archlinux:*)
-              pacman -Syu --noconfirm xorg-server-xvfb xorg-xauth openbox xdotool wmctrl python \
+              pacman -Syu --noconfirm xorg-server-xvfb xorg-xwininfo python \
                 alsa-lib fontconfig freetype2 libx11 libxext libxcursor libxinerama \
                 libxrender libxrandr zlib ttf-dejavu
               ;;
@@ -143,22 +143,26 @@ jobs:
           mkdir -p .local-build/portable
           tar -xzf packages/risco-0.1.0-linux-x86_64.tar.gz -C .local-build/portable
           chmod +x packages/risco-0.1.0-linux-x86_64.AppImage
-          xvfb-run -a -s '-screen 0 1600x1000x24' bash -c '
+          Xvfb :77 -screen 0 1600x1000x24 -nolisten tcp >.local-build/xvfb.log 2>&1 &
+          xvfb_pid=$!
+          trap 'kill "$xvfb_pid" 2>/dev/null || true' EXIT
+          export DISPLAY=:77
+          sleep 2
+          bash -c '
             set -euo pipefail
-            openbox >openbox.log 2>&1 & wm=$!; trap "kill $wm 2>/dev/null || true" EXIT; sleep 2
             check_window() {
               label="$1"; shift
               "$@" >"$label.log" 2>&1 & app=$!
               found=0
               for i in $(seq 1 30); do
-                if wmctrl -l | grep -qi "Risco"; then found=1; break; fi
+                if xwininfo -root -tree | grep -qi "Risco"; then found=1; break; fi
                 if ! kill -0 "$app" 2>/dev/null; then break; fi
                 sleep 1
               done
-              test "$found" = 1 || { cat "$label.log"; echo "$label: no Risco window"; return 1; }
+              test "$found" = 1 || { cat "$label.log"; echo "$label: no Risco X11 window"; return 1; }
               sleep 20
               kill -0 "$app" || { cat "$label.log"; echo "$label: app exited"; return 1; }
-              wmctrl -l | grep -qi "Risco"
+              xwininfo -root -tree | grep -qi "Risco"
               kill "$app"; wait "$app" 2>/dev/null || true
             }
             if test -x /usr/bin/Risco; then check_window deb env RISCO_TEST_NO_AUDIO=1 /usr/bin/Risco; fi
