@@ -146,6 +146,12 @@ static void removeFilterRecord(std::string& text) {
     if (start != std::string::npos) text.erase(start, text.find('\n', start) - start + 1);
 }
 
+static std::unique_ptr<risco::SongPlayback> makeSongPlayback(const risco::Song& song) {
+    auto playback = std::make_unique<risco::SongPlayback>();
+    *playback = risco::prepareSongPlayback(song);
+    return playback;
+}
+
 static bool checkInternalRests() {
     auto song = std::make_unique<risco::Song>();
     song->bpm = 120; song->beatsPerBar = 4;
@@ -165,7 +171,7 @@ static bool checkInternalRests() {
     if (!callId || !destinationId ||
         !risco::placeCell(*song,{callId,0,risco::CellSpan::twoBars,1,0,0,0}) ||
         !risco::placeCell(*song,{destinationId,0,risco::CellSpan::twoBars,1,0,0,1})) return false;
-    auto result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    auto result = makeSongPlayback(*song);
     if (result->responseCount != 1 || result->responses[0].cell.count != 1 ||
         result->responses[0].start != 2 || result->responses[0].cell.notes[0].start != 0.75 ||
         result->responseNotesRejected != 1 || result->responseGapBudgetExceeded ||
@@ -174,15 +180,15 @@ static bool checkInternalRests() {
     }
     // The old block-level policy remains conservative even when notes leave gaps.
     song->responsePolicy = 4;
-    if (risco::prepareSongPlayback(*song).responseCount != 0) return false;
+    if (makeSongPlayback(*song)->responseCount != 0) return false;
     song->responsePolicy = 7;
     song->bank[1].formulaEvents.notes[0] = {2.1,0.05,220,0.2f};
-    auto partialOverlap = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    auto partialOverlap = makeSongPlayback(*song);
     if (partialOverlap->responseCount != 1 || partialOverlap->responses[0].cell.count != 1 ||
         partialOverlap->responses[0].cell.notes[0].start != 0.75) return false;
     song->bank[1].formulaEvents.notes[0] = {2,0.25,220,0.2f};
     std::swap(song->grid[0],song->grid[1]);
-    auto reordered = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    auto reordered = makeSongPlayback(*song);
     if (reordered->responseCount != 1 || reordered->responses[0].cell.count != 1 ||
         reordered->responses[0].cell.notes[0].frequency != result->responses[0].cell.notes[0].frequency ||
         reordered->responses[0].cell.notes[0].start != 0.75) return false;
@@ -207,16 +213,16 @@ static bool checkInternalRests() {
     song->responsePolicy = 7;
     // Boundaries are half-open: an ending note can meet a response attack.
     song->bank[1].formulaEvents.notes[0] = {2.25,0.5,220,0.2f};
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (result->responseCount != 1 || result->responses[0].cell.count != 2) return false;
     // Cropping a repeated cell keeps a note already held at the crop entrance.
     song->bank[1].formulaEvents.end = 1;
     song->bank[1].formulaEvents.notes[0] = {0,0.75,220,0.2f};
     song->grid[1].sourceStartBeat = 1; song->grid[1].repeats = 4;
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (result->responseCount != 0 || result->responseNotesRejected != 2) return false;
     song->bank[1].formulaEvents.notes[0] = {0.5,0.5,220,0.2f};
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (result->responseCount != 1 || result->responses[0].cell.count != 1 ||
         result->responses[0].cell.notes[0].start != 0.75) return false;
     // A full section leads to a later answer, without cutting or moving notes.
@@ -226,15 +232,15 @@ static bool checkInternalRests() {
     song->bank[0].formulaEvents.end = 6; song->bank[0].formulaEvents.count = 4;
     song->bank[0].formulaEvents.notes[2] = {2,0.25,440,0.2f};
     song->bank[0].formulaEvents.notes[3] = {2.75,0.25,550,0.2f};
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (result->responseCount != 1 || result->responses[0].start != 4 ||
         result->responses[0].cell.count != 2 || result->responseNotesRejected != 2) return false;
     const auto rawId = risco::storeFormulaCell(*song,"t","Raw",{});
     song->grid[1].cellId = rawId; song->grid[1].span = risco::CellSpan::fourBars;
-    if (!rawId || risco::prepareSongPlayback(*song).responseCount != 0) return false;
+    if (!rawId || makeSongPlayback(*song)->responseCount != 0) return false;
     // Previous generated answers reserve actual notes, including with duplicate calls.
     song->placementCount = 2; song->grid[1] = song->grid[0];
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (result->responseCount != 2 || result->responses[0].start != 2 ||
         result->responses[1].start != 4) return false;
     // Worst-case explicit silent material reaches the global budget deterministically.
@@ -248,7 +254,7 @@ static bool checkInternalRests() {
     song->placementCount = 128;
     for (int p = 0; p < 128; ++p)
         song->grid[static_cast<size_t>(p)] = {p < 4 ? callId : destinationId,0,risco::CellSpan::twoBars,1,0,0,p < 4 ? 0 : 1};
-    result = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    result = makeSongPlayback(*song);
     if (!result->responseGapBudgetExceeded || result->responseGapChecks != risco::SongPlayback::gapCheckLimit ||
         result->responseNotesRejected == 0) return false;
     return true;
@@ -354,7 +360,7 @@ static bool checkPhraseTakes() {
     const auto originalId = risco::storeGeneratedCell(*song,1234,2,"Original",{},6);
     if (!originalId || !risco::placeCell(*song,{originalId,0,risco::CellSpan::fourBars,1,0,0,0})) return false;
     auto original = std::make_unique<risco::Cell>(song->bank[0]);
-    auto baseline = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    auto baseline = makeSongPlayback(*song);
     auto recipe = std::make_unique<risco::Cell>(*original);
     recipe->name = "Take · edição";
     recipe->sectionEdits[1] = {0.5f,0.6f,-1};
@@ -366,7 +372,7 @@ static bool checkPhraseTakes() {
         song->placementCount != 1 || song->grid[0].cellId != originalId ||
         song->bank[0].revision != original->revision || song->bank[0].sectionEdits[1].gain != 1 ||
         song->bank[0].phraseMeters != original->phraseMeters || song->bank[1].revision != 1) return false;
-    auto unchanged = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*song));
+    auto unchanged = makeSongPlayback(*song);
     if (unchanged->end != baseline->end || unchanged->placements[0].cell.count != baseline->placements[0].cell.count) return false;
     for (int sample = 0; sample < 2000; ++sample) {
         const double time = sample / 250.0;
@@ -382,7 +388,7 @@ static bool checkPhraseTakes() {
         loaded->bank[1].sectionEdits[1].density != 0.5f || loaded->bank[1].sectionEdits[1].gain != 0.6f ||
         loaded->bank[1].sectionEdits[1].octaves != -1 || loaded->bank[1].role != recipe->role) return false;
     loaded->grid[0].cellId = takeId;
-    auto alternative = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*loaded));
+    auto alternative = makeSongPlayback(*loaded);
     if (alternative->end == baseline->end) return false;
     auto legacy = file.str(); removeTakeRecord(legacy); removeInputGestureCurveFields(legacy);
     legacy.replace(0,std::string("RISCO_SONG_V65").size(),"RISCO_SONG_V53");
@@ -673,7 +679,7 @@ int main() {
     responseSong.interStemResponse = 1;
     if (!risco::placeCell(responseSong,
             {responseId, 0, risco::CellSpan::fourBars, 1, 0, 0, 0})) return 17;
-    const auto responsePlayback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(responseSong));
+    const auto responsePlayback = makeSongPlayback(responseSong);
     if (responsePlayback->responseCount != 1 ||
         responsePlayback->responses[0].stem != 1 ||
         std::abs(responsePlayback->responses[0].start - 4.0) > 1.0e-9 ||
@@ -1008,7 +1014,7 @@ int main() {
     dialog->stemRole[1] = risco::CellRole::bass;
     if (!risco::placeCell(*dialog, {callId, 0, risco::CellSpan::fourBars, 1, 0, 0, 0})) return 73;
     dialog->responsePolicy = 2;
-    const auto roleAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto roleAnswer = makeSongPlayback(*dialog);
     if (roleAnswer->responseCount != 1) return 74;
     const int completeResponseNotes = roleAnswer->responses[0].cell.count;
     for (int n = 0; n < roleAnswer->responses[0].cell.count; ++n) {
@@ -1016,15 +1022,15 @@ int main() {
         if (note.role != risco::VoiceRole::bass || note.frequency < 65.4 || note.frequency > 261.63) return 75;
     }
     dialog->responseMotif = 1;
-    const auto structuralAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto structuralAnswer = makeSongPlayback(*dialog);
     if (structuralAnswer->responseCount != 1 || structuralAnswer->responses[0].cell.count < 1 ||
         structuralAnswer->responses[0].cell.count > 4 || structuralAnswer->responses[0].cell.count > completeResponseNotes) return 298;
     dialog->responseMotif = 2;
-    const auto contourAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto contourAnswer = makeSongPlayback(*dialog);
     if (contourAnswer->responseCount != 1 || contourAnswer->responses[0].cell.count < 1 ||
         contourAnswer->responses[0].cell.count > 4 || contourAnswer->responses[0].cell.count > completeResponseNotes) return 299;
     dialog->responseMotif = 0; dialog->responseDensity = 2;
-    const auto sparseAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto sparseAnswer = makeSongPlayback(*dialog);
     if (sparseAnswer->responseCount != 1 || sparseAnswer->responses[0].cell.count < 1 ||
         sparseAnswer->responses[0].cell.count > completeResponseNotes ||
         (completeResponseNotes > 2 && sparseAnswer->responses[0].cell.count >= completeResponseNotes) ||
@@ -1035,16 +1041,16 @@ int main() {
     auto memorySong = std::make_unique<risco::Song>(*dialog);
     memorySong->responsePolicy = 0;
     if (!risco::placeCell(*memorySong, {callId, 16, risco::CellSpan::fourBars, 1, 0, 0, 0})) return 308;
-    const auto independentMemory = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*memorySong));
+    const auto independentMemory = makeSongPlayback(*memorySong);
     memorySong->responseMemory = 1;
-    const auto linkedMemory = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*memorySong));
+    const auto linkedMemory = makeSongPlayback(*memorySong);
     if (independentMemory->responseCount != 2 || linkedMemory->responseCount != 2 ||
         linkedMemory->responses[1].cell.notes[0].frequency == independentMemory->responses[1].cell.notes[0].frequency) return 309;
     if (!risco::placeCell(*dialog, {callId, 0, risco::CellSpan::fourBars, 1, 0, 0, 1})) return 76;
-    const auto occupiedAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto occupiedAnswer = makeSongPlayback(*dialog);
     if (occupiedAnswer->responseCount != 0 || occupiedAnswer->responsesSkipped == 0) return 77;
     dialog->responsePolicy = 0;
-    if (risco::prepareSongPlayback(*dialog).responseCount != 1) return 78;
+    if (makeSongPlayback(*dialog)->responseCount != 1) return 78;
     dialog->responsePolicy = 2;
     dialog->stemEffect = {1, 3, 4};
     dialog->responseMotif = 2; dialog->responseDensity = 1;
@@ -1231,7 +1237,7 @@ int main() {
     if (!readingId) return 99;
     dialog->bank[2].inputInterpretation = 2;
     if (!risco::placeCell(*dialog, {readingId, 0, risco::CellSpan::bar, 1, 0, 0, 2})) return 100;
-    const auto readingPlayback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto readingPlayback = makeSongPlayback(*dialog);
     const auto& readNotes = readingPlayback->placements[2].cell;
     for (int n = 0; n < readNotes.count; ++n) if (readNotes.notes[static_cast<size_t>(n)].frequency != 220) return 101;
     std::stringstream readingFile;
@@ -1302,7 +1308,7 @@ int main() {
             {{-1,-1,-1,-1}}, false, pulses);
         if (!id || !risco::placeCell(*polySong, {id, 0, risco::CellSpan::fourBars, 1, 0, 0, stem})) return 115;
     }
-    const auto polyPlayback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*polySong));
+    const auto polyPlayback = makeSongPlayback(*polySong);
     if (polyPlayback->count != 2 || polyPlayback->placements[0].cell.count != 12 ||
         polyPlayback->placements[1].cell.count != 8 || polyPlayback->placements[0].duration != 8 ||
         polyPlayback->placements[1].duration != 8 ||
@@ -1368,7 +1374,7 @@ int main() {
     mixedSong->bank[0].sectionEdits = silentSection;
     if (!mixedId || !risco::placeCell(*mixedSong, {mixedId, 0, risco::CellSpan::fourBars, 1, 0, 0, 0}) ||
         risco::placementLengthSeconds(*mixedSong, mixedSong->grid[0]) != 9) return 124;
-    const auto mixedPlayback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto mixedPlayback = makeSongPlayback(*mixedSong);
     if (mixedPlayback->count != 1 || mixedPlayback->end != 9 || mixedPlayback->placements[0].duration != 9) return 125;
     for (int n = 0; n < mixedPlayback->placements[0].cell.count; ++n) {
         const auto& note = mixedPlayback->placements[0].cell.notes[static_cast<size_t>(n)];
@@ -1398,13 +1404,13 @@ int main() {
     mixedSong->bank[0].phraseMeters = meters;
     mixedSong->interStemResponse = 1;
     mixedSong->responsePolicy = 1;
-    const auto mixedResponse = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto mixedResponse = makeSongPlayback(*mixedSong);
     if (mixedResponse->responseCount != 1 || mixedResponse->responses[0].start != 1.5 ||
         mixedResponse->responses[0].cell.end != 2.5 || mixedResponse->responses[0].sourceSection != 0) return 130;
     auto intentionalSong = std::make_unique<risco::Song>(*mixedSong);
     intentionalSong->responsePolicy = 0;
     intentionalSong->responseSectionIntent[0] = 5;
-    const auto intentionalResponse = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*intentionalSong));
+    const auto intentionalResponse = makeSongPlayback(*intentionalSong);
     if (intentionalResponse->responseCount != 1 || intentionalResponse->responses[0].sourceSection != 1) return 310;
     const auto& callSequence = mixedResponse->placements[0].cell;
     const auto& answerSequence = mixedResponse->responses[0].cell;
@@ -1420,17 +1426,17 @@ int main() {
     }
     if (matched != answerSequence.count) return 133;
     if (!risco::placeCell(*mixedSong, {mixedId, 7, risco::CellSpan::fourBars, 1, 0, 1, 1})) return 134;
-    const auto occupiedMixed = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto occupiedMixed = makeSongPlayback(*mixedSong);
     if (occupiedMixed->responseCount != 1 || occupiedMixed->responses[0].start != 4 ||
         occupiedMixed->responses[0].cell.end != 1.5 || occupiedMixed->responses[0].sourceSection != 1 ||
         occupiedMixed->responsesSkipped != 1) return 135;
     mixedSong->placementCount = 1;
     mixedSong->bank[0].phraseSectionMask = 14;
-    const auto maskedMixed = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto maskedMixed = makeSongPlayback(*mixedSong);
     if (maskedMixed->responseCount != 1 || maskedMixed->responses[0].start != 4 ||
         maskedMixed->responses[0].sourceSection != 1) return 136;
     mixedSong->interStemResponse = 0;
-    if (risco::prepareSongPlayback(*mixedSong).responseCount != 0) return 137;
+    if (makeSongPlayback(*mixedSong)->responseCount != 0) return 137;
     mixedSong->interStemResponse = 1;
     mixedSong->responsePolicy = 3;
     risco::Sequence chord;
@@ -1444,7 +1450,7 @@ int main() {
     if (!referenceId) return 138;
     mixedSong->bank[1].role = risco::CellRole::harmony;
     if (!risco::placeCell(*mixedSong, {referenceId, 0, risco::CellSpan::fourBars, 1, 0, 0, 2})) return 139;
-    const auto contextualAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto contextualAnswer = makeSongPlayback(*mixedSong);
     if (contextualAnswer->responseCount != 1 || contextualAnswer->responses[0].harmonicReferenceId != referenceId) return 140;
     for (int n = 0; n < contextualAnswer->responses[0].cell.count; ++n) {
         const auto& note = contextualAnswer->responses[0].cell.notes[static_cast<size_t>(n)];
@@ -1454,7 +1460,7 @@ int main() {
             note.gain != maskedMixed->responses[0].cell.notes[static_cast<size_t>(n)].gain) return 142;
     }
     std::swap(mixedSong->grid[0], mixedSong->grid[1]);
-    if (risco::prepareSongPlayback(*mixedSong).responses[0].harmonicReferenceId != referenceId) return 143;
+    if (makeSongPlayback(*mixedSong)->responses[0].harmonicReferenceId != referenceId) return 143;
     std::stringstream contextFile;
     if (!risco::saveSong(contextFile, *mixedSong) || !risco::loadSong(contextFile, connectedLoaded) ||
         connectedLoaded.responsePolicy != 3) return 144;
@@ -1462,7 +1468,7 @@ int main() {
     polySong->responsePolicy = 3;
     // Move the other lead-only lane away from the response destination.
     polySong->grid[1].stem = 2;
-    const auto noChord = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*polySong));
+    const auto noChord = makeSongPlayback(*polySong);
     if (noChord->responseCount != 1 || noChord->responses[0].harmonicReferenceId != 0) return 145;
     auto& movingChord = mixedSong->bank[1].formulaEvents;
     movingChord.count = 6;
@@ -1473,7 +1479,7 @@ int main() {
         movingChord.notes[static_cast<size_t>(n + 3)] = next;
     }
     mixedSong->responsePolicy = 4;
-    const auto movingAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto movingAnswer = makeSongPlayback(*mixedSong);
     int early = 0, late = 0;
     for (int n = 0; n < movingAnswer->responses[0].cell.count; ++n) {
         const auto& note = movingAnswer->responses[0].cell.notes[static_cast<size_t>(n)];
@@ -1483,14 +1489,14 @@ int main() {
     }
     if (!early || !late) return 148;
     mixedSong->responsePolicy = 2;
-    const auto registerAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto registerAnswer = makeSongPlayback(*mixedSong);
     mixedSong->responsePolicy = 4;
     for (int n = 0; n < 3; ++n) {
         movingChord.notes[static_cast<size_t>(n)].duration = 4.4;
         movingChord.notes[static_cast<size_t>(n + 3)].start = 5.1;
         movingChord.notes[static_cast<size_t>(n + 3)].duration = 2.9;
     }
-    const auto gapAnswer = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto gapAnswer = makeSongPlayback(*mixedSong);
     int gaps = 0;
     for (int n = 0; n < gapAnswer->responses[0].cell.count; ++n) {
         const auto& note = gapAnswer->responses[0].cell.notes[static_cast<size_t>(n)];
@@ -1513,7 +1519,7 @@ int main() {
     movingChord.count = 3;
     for (int n = 0; n < 3; ++n) movingChord.notes[static_cast<size_t>(n)].duration = 8;
     mixedSong->responsePolicy = 5;
-    const auto tension = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto tension = makeSongPlayback(*mixedSong);
     int tensionNotes = 0;
     const auto& tensionSequence = tension->responses[0].cell;
     for (int n = 0; n < tensionSequence.count; ++n) {
@@ -1528,7 +1534,7 @@ int main() {
     }
     if (!tensionNotes) return 155;
     mixedSong->responsePolicy = 6;
-    const auto finalSupport = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*mixedSong));
+    const auto finalSupport = makeSongPlayback(*mixedSong);
     double lastAttack = 0;
     for (int n = 0; n < finalSupport->responses[0].cell.count; ++n)
         lastAttack = std::max(lastAttack, finalSupport->responses[0].cell.notes[static_cast<size_t>(n)].start);
@@ -1546,7 +1552,7 @@ int main() {
         std::stringstream intentFile;
         if (!risco::saveSong(intentFile, *mixedSong) || !risco::loadSong(intentFile, connectedLoaded) || connectedLoaded.responsePolicy != policy) return 158;
         polySong->responsePolicy = policy;
-        const auto fallback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*polySong));
+        const auto fallback = makeSongPlayback(*polySong);
         for (int n = 0; n < fallback->responses[0].cell.count; ++n)
             if (fallback->responses[0].cell.notes[static_cast<size_t>(n)].frequency != noChord->responses[0].cell.notes[static_cast<size_t>(n)].frequency) return 159;
     }
@@ -2176,7 +2182,7 @@ int main() {
     const auto halfReading = risco::interpretInput(strengthSource, 2, 0.5f);
     if (std::abs(halfReading.notes[0].frequency - 440) > 1e-9 || std::abs(halfReading.notes[0].gain - 0.13f) > 1e-6) return 250;
     dialog->bank[2].inputInterpretationStrength = 0.5f;
-    const auto strengthPlayback = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(*dialog));
+    const auto strengthPlayback = makeSongPlayback(*dialog);
     const auto originalReading = risco::composeInput(inscription);
     if (std::abs(strengthPlayback->placements[2].cell.notes[0].frequency -
         std::sqrt(originalReading.notes[0].frequency * 220)) > 1e-6) return 255;
