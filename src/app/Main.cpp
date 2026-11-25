@@ -31,6 +31,7 @@
 #include <charconv>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -2780,7 +2781,11 @@ public:
         refreshToggleDisplays();
         refreshFormulaGridStatus();
         setSize(1280, 900);
-        setAudioChannels(0, 2);
+        // The packaged GUI can also be inspected in a container with no
+        // audio device; CI uses this to validate window startup independently
+        // from ALSA hardware discovery. Normal launches keep audio enabled.
+        if (std::getenv("RISCO_TEST_NO_AUDIO") == nullptr)
+            setAudioChannels(0, 2);
         if (recoveryPending)
             status.setText(utf8("Há uma cópia automática anterior. Abra Abrir para recuperar ou descartar; ela será preservada até sua escolha."),
                            juce::dontSendNotification);

@@ -161,11 +161,11 @@ jobs:
               wmctrl -l | grep -qi "Risco"
               kill "$app"; wait "$app" 2>/dev/null || true
             }
-            if test -x /usr/bin/Risco; then check_window deb /usr/bin/Risco; fi
-            check_window appimage env APPIMAGE_EXTRACT_AND_RUN=1 packages/risco-0.1.0-linux-x86_64.AppImage
+            if test -x /usr/bin/Risco; then check_window deb env RISCO_TEST_NO_AUDIO=1 /usr/bin/Risco; fi
+            check_window appimage env RISCO_TEST_NO_AUDIO=1 APPIMAGE_EXTRACT_AND_RUN=1 packages/risco-0.1.0-linux-x86_64.AppImage
             prefix="$PWD/.local-build/portable/home/.local"
             .local-build/portable/risco-0.1.0-linux-x86_64/install.sh --prefix "$prefix"
-            check_window portable "$prefix/bin/Risco"
+            check_window portable env RISCO_TEST_NO_AUDIO=1 "$prefix/bin/Risco"
             .local-build/portable/risco-0.1.0-linux-x86_64/install.sh --remove --prefix "$prefix"
           '
 
