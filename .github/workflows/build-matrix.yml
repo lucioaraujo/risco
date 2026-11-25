@@ -1,0 +1,69 @@
+name: Risco platform evaluation builds
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/build-matrix.yml"
+      - "third_party/ayumi/**"
+permissions:
+  contents: read
+concurrency:
+  group: platform-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux-x86_64
+            configure: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRISCO_JUCE_SOURCE_DIR=third_party/JUCE-9.0.3
+            build: cmake --build build --parallel 2
+            test: ctest --test-dir build --output-on-failure
+            binary: build/risco_app_artefacts/Release/Risco
+          - os: windows-2022
+            name: windows-x86_64
+            configure: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DRISCO_JUCE_SOURCE_DIR=third_party/JUCE-9.0.3
+            build: cmake --build build --config Release --parallel 2
+            test: ctest --test-dir build -C Release --output-on-failure
+            binary: build/risco_app_artefacts/Release/Risco.exe
+          - os: macos-14
+            name: macos
+            configure: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRISCO_JUCE_SOURCE_DIR=third_party/JUCE-9.0.3
+            build: cmake --build build --parallel 2
+            test: ctest --test-dir build --output-on-failure
+            binary: build/risco_app_artefacts/Release/Risco.app
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: 9.0.3
+          path: third_party/JUCE-9.0.3
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libgl1-mesa-dev
+      - if: runner.os == 'macOS'
+        run: brew install ninja
+      - name: Configure
+        shell: bash
+        run: ${{ matrix.configure }}
+      - name: Build
+        shell: bash
+        run: ${{ matrix.build }}
+      - name: Test
+        shell: bash
+        run: ${{ matrix.test }}
+      - name: Confirm application artifact
+        shell: bash
+        run: test -e "${{ matrix.binary }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: risco-${{ matrix.name }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
+          retention-days: 14
