@@ -74,7 +74,13 @@ jobs:
       - name: Test
         if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
-        run: ${{ matrix.test }}
+        run: ${{ matrix.test }} 2>&1 | tee test.log
+      - if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: risco-windows-test-log
+          path: test.log
+          if-no-files-found: ignore
       - name: Confirm application artifact
         if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
