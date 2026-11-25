@@ -3,6 +3,13 @@
 cmake_minimum_required(VERSION 3.22)
 project(Risco VERSION 0.1.0 LANGUAGES C CXX)
 
+# Song owns a bounded bank of 64 cells, each with fixed-capacity inscription
+# and event storage. Match the usual Unix main-thread stack on Windows so
+# validation tools and application entry points can hold temporary Songs.
+if(MSVC)
+    add_link_options(/STACK:8388608)
+endif()
+
 set(RISCO_AYUMI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ayumi" CACHE PATH
     "Audited Ayumi source used by Risco's historical AY/YM core")
 if(NOT RISCO_AYUMI_SOURCE_DIR)

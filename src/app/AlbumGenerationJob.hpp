@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <functional>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -49,14 +50,14 @@ public:
             }
             setStatusMessage("Gerando projeto " + juce::String(index + 1) + "/" +
                              juce::String(manifest.count));
-            risco::Song song;
-            if (!risco::generateAlbumTrack(manifest.plan, index, song)) {
+            auto song = std::make_unique<risco::Song>();
+            if (!risco::generateAlbumTrack(manifest.plan, index, *song)) {
                 result = "Falha ao gerar a faixa " + juce::String(index + 1) +
                          "; o manifesto preserva o ponto de retomada.";
                 return;
             }
             std::ostringstream serialized;
-            if (!risco::saveSong(serialized, song)) {
+            if (!risco::saveSong(serialized, *song)) {
                 result = "A faixa " + juce::String(index + 1) + " não passou na validação .risco.";
                 return;
             }
@@ -93,8 +94,8 @@ private:
         juce::MemoryBlock bytes;
         if (!file.loadFileAsData(bytes)) return false;
         std::istringstream input(std::string(static_cast<const char*>(bytes.getData()), bytes.getSize()));
-        risco::Song song;
-        return risco::loadSong(input, song) && risco::albumTrackMatchesProject(record.plan, song);
+        auto song = std::make_unique<risco::Song>();
+        return risco::loadSong(input, *song) && risco::albumTrackMatchesProject(record.plan, *song);
     }
 
     bool writeAtomically(const juce::File& target, const std::string& data) {
