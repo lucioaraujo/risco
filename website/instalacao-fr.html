@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Installer Risco sous Linux, Windows et macOS : paquets, prérequis et avertissements au premier lancement.">
+  <title>Installer Risco</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a class="brand" href="fr.html">RASGO<b>.</b> / RISCO</a>
+  <nav><a href="fr.html#versions">Téléchargements</a><a href="instalacao-fr.html">Installation</a></nav>
+  <div class="lang"><a href="instalacao.html">PT</a><a href="instalacao-en.html">EN</a><a class="current" href="instalacao-fr.html">FR</a><a href="instalacao-es.html">ES</a></div>
+</header>
+<main class="doc">
+  <p class="eyebrow">Risco 0.1.0 · évaluation</p>
+  <h1>Installer Risco</h1>
+  <p class="lead">Choisissez le paquet de votre système. Les formats Linux partagent un build Ubuntu 22.04 ; fichiers et sommes de contrôle figurent dans la <a href="https://github.com/lucioaraujo/risco/releases/tag/v0.1.0-rc1">version d’évaluation</a>.</p>
+
+  <section><h2>Linux x86_64</h2>
+    <p>Ubuntu 22.04 ou plus récent, Debian 12 ou plus récent, Linux Mint 21 ou plus récent, Fedora et Arch. Le build prend glibc 2.35 comme base. L’interface utilise X11 ou XWayland et l’audio ALSA. Le paquet Debian installe ses dépendances système.</p>
+    <article class="card"><h3>Debian, Ubuntu et Mint · .deb</h3><ol><li>Téléchargez le <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.deb">paquet .deb</a>.</li><li>Ouvrez-le avec l’installateur graphique ou exécutez <code>sudo apt install ./risco-0.1.0-linux-x86_64.deb</code> dans le dossier téléchargé.</li><li>Lancez Risco depuis le menu des applications. Pour le retirer : <code>sudo apt remove risco</code>.</li></ol></article>
+    <article class="card"><h3>Autres distributions · AppImage</h3><ol><li>Téléchargez l’<a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.AppImage">AppImage</a>.</li><li>Autorisez son exécution dans les propriétés du fichier ou exécutez <code>chmod +x risco-0.1.0-linux-x86_64.AppImage</code>.</li><li>Ouvrez-le par double-clic ou depuis un terminal.</li></ol></article>
+    <article class="card"><h3>Installation pour votre compte · .tar.gz</h3><ol><li>Téléchargez et extrayez l’<a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.tar.gz">archive .tar.gz</a>.</li><li>Dans le dossier extrait, exécutez <code>./install.sh</code>. Risco s’installe dans <code>~/.local</code>, sans privilèges administrateur.</li><li>Pour retirer les fichiers de l’application, exécutez <code>./install.sh --remove</code> depuis le même dossier.</li></ol></article>
+  </section>
+
+  <section><h2>Windows 10 ou 11 · x64</h2>
+    <ol><li>Téléchargez et extrayez l’<a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-windows-x64.zip">archive ZIP</a>.</li><li>Ouvrez <code>Risco.exe</code>. Si Windows signale une DLL MSVC manquante, installez le <a href="https://aka.ms/vc14/vc_redist.x64.exe">Microsoft Visual C++ v14 Redistributable x64</a>.</li></ol>
+  </section>
+
+  <section><h2>macOS · Apple Silicon</h2>
+    <ol><li>Téléchargez et extrayez l’<a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-macos-arm64.zip">archive ZIP</a>, puis ouvrez Risco.</li><li>L’application n’est ni signée ni notariée. Si macOS bloque le premier lancement, utilisez Réglages Système → Confidentialité et sécurité → Ouvrir quand même.</li></ol>
+    <p>Ce paquet est destiné à Apple Silicon ; les Mac Intel ne sont pas inclus.</p>
+  </section>
+  <p class="note">Ce sont des paquets d’évaluation. Les contrôles automatisés vérifient le build, les tests et le démarrage sur les systèmes indiqués ; interface, polices, audio et périphériques restent à évaluer sur des ordinateurs personnels. <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/SHA256SUMS">SHA256SUMS</a> · <a href="https://github.com/lucioaraujo/risco/tree/v0.1.0-rc1">code source</a>.</p>
+</main>
+<footer>RASGO · instruments, son et recherche · <a href="https://github.com/lucioaraujo/risco">Dépôt public</a></footer>
+</body>
+</html>

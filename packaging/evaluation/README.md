@@ -12,10 +12,11 @@ notes below before use.
 
 ## Platform notes
 
-- **Linux x86_64:** built on Ubuntu 24.04. Uses the host's X11, ALSA,
-  FreeType and Fontconfig libraries. Install the corresponding runtime
-  packages for your distribution. Launch `Risco` from a terminal to see
-  startup errors.
+- **Linux x86_64:** the `.deb`, AppImage and user-local-installable `.tar.gz`
+  are built from one CMake install tree on Ubuntu 22.04. The Debian package is
+  for Debian/Ubuntu/Mint; use AppImage or the `.tar.gz` on other distributions.
+  The `.tar.gz` installer writes to `~/.local`, without root; remove it with
+  `./install.sh --remove`. User projects and preferences remain separate.
 - **Windows x86_64:** built on Windows Server 2022 with Visual Studio 2022.
   Extract the archive and launch `Risco.exe`. If Windows reports a missing
   MSVC runtime DLL, install the official [Microsoft Visual C++ v14 x64

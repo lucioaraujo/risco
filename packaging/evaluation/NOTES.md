@@ -5,9 +5,10 @@
 Os arquivos desta versão foram compilados para Linux x86_64, Windows x86_64 e
 macOS arm64. Os 12 testes automatizados passaram em cada plataforma na
 [matriz GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Isso verifica compilação e testes automatizados; não verifica inicialização,
-interface ou áudio em computadores pessoais. São arquivos de avaliação, sem
-instaladores. O macOS é apenas Apple Silicon e não está assinado/notarizado.
+Isso verifica compilação e testes automatizados; não substitui a avaliação
+manual de interface e áudio. No Linux há `.deb`, AppImage e `.tar.gz` com
+instalação em `~/.local`; Windows e macOS vêm em arquivos ZIP portáteis. O
+macOS é apenas Apple Silicon e não está assinado/notarizado.
 
 Veja `SHA256SUMS` e `README.md` dentro de cada arquivo. O código-fonte
 correspondente está na tag `v0.1.0-evaluation`. Licenças e proveniência estão
@@ -22,8 +23,9 @@ These archives were built for Linux x86_64, Windows x86_64 and macOS arm64.
 All 12 automated tests passed on each platform in
 [GitHub Actions run 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
 This checks compilation and automated tests; it does not verify startup,
-interface or audio on personal computers. These are evaluation archives, not
-installers. The macOS build is Apple Silicon only, unsigned and not notarized.
+interface or audio on personal computers. Linux provides a Debian package, an
+AppImage and a user-local-installable `.tar.gz`; Windows and macOS are portable
+ZIP archives. The macOS build is Apple Silicon only, unsigned and not notarized.
 
 See `SHA256SUMS` and the `README.md` inside each archive. Corresponding source
 is available at tag `v0.1.0-evaluation`. License and provenance information is
@@ -37,9 +39,10 @@ On Windows, if the system reports a missing MSVC runtime DLL, install the
 Ces archives ont été compilées pour Linux x86_64, Windows x86_64 et macOS
 arm64. Les 12 tests automatisés ont réussi sur chaque plateforme dans
 [l’exécution GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Cela vérifie la compilation et les tests automatisés, pas le démarrage,
-l’interface ou l’audio sur un ordinateur personnel. Ce sont des archives
-d’évaluation, sans installateur. macOS est limité à Apple Silicon et n’est ni
+Cela vérifie la compilation et les tests automatisés, sans remplacer une
+évaluation manuelle de l’interface et de l’audio. Linux propose un `.deb`, un
+AppImage et un `.tar.gz` installable dans `~/.local`; Windows et macOS sont
+fournis en archives ZIP portables. macOS est limité à Apple Silicon et n’est ni
 signé ni notarié.
 
 Voir `SHA256SUMS` et le `README.md` de chaque archive. Le code source
@@ -55,10 +58,10 @@ installez le [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/
 Estos archivos se compilaron para Linux x86_64, Windows x86_64 y macOS arm64.
 Las 12 pruebas automatizadas pasaron en cada plataforma en la
 [ejecución de GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Esto verifica la compilación y las pruebas automatizadas; no verifica el
-inicio, la interfaz ni el audio en ordenadores personales. Son archivos de
-evaluación, sin instaladores. macOS es solo para Apple Silicon y no está
-firmado ni notarizado.
+Esto verifica la compilación y las pruebas automatizadas, sin sustituir la
+evaluación manual de interfaz y audio. Linux ofrece `.deb`, AppImage y `.tar.gz`
+instalable en `~/.local`; Windows y macOS se distribuyen como archivos ZIP
+portátiles. macOS es solo para Apple Silicon y no está firmado ni notarizado.
 
 Consulte `SHA256SUMS` y el `README.md` de cada archivo. El código fuente
 correspondiente está en la etiqueta `v0.1.0-evaluation`. Las licencias y la

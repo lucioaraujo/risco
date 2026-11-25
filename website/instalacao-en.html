@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Install Risco on Linux, Windows and macOS: packages, requirements and first-launch notices.">
+  <title>Install Risco</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a class="brand" href="en.html">RASGO<b>.</b> / RISCO</a>
+  <nav><a href="en.html#versions">Downloads</a><a href="instalacao-en.html">Installation</a></nav>
+  <div class="lang"><a href="instalacao.html">PT</a><a class="current" href="instalacao-en.html">EN</a><a href="instalacao-fr.html">FR</a><a href="instalacao-es.html">ES</a></div>
+</header>
+<main class="doc">
+  <p class="eyebrow">Risco 0.1.0 · evaluation</p>
+  <h1>Install Risco</h1>
+  <p class="lead">Choose a package for your system. Linux formats share an Ubuntu 22.04 build; files and checksums are listed in the <a href="https://github.com/lucioaraujo/risco/releases/tag/v0.1.0-rc1">evaluation release</a>.</p>
+
+  <section><h2>Linux x86_64</h2>
+    <p>Ubuntu 22.04 or newer, Debian 12 or newer, Linux Mint 21 or newer, Fedora and Arch. The build uses glibc 2.35 as its baseline. The interface needs X11 or XWayland and audio uses ALSA. The Debian package installs its system dependencies.</p>
+    <article class="card"><h3>Debian, Ubuntu and Mint · .deb</h3><ol><li>Download the <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.deb">.deb package</a>.</li><li>Open it with your graphical installer, or run <code>sudo apt install ./risco-0.1.0-linux-x86_64.deb</code> from the download folder.</li><li>Launch Risco from the applications menu. Remove it with <code>sudo apt remove risco</code>.</li></ol></article>
+    <article class="card"><h3>Other distributions · AppImage</h3><ol><li>Download the <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.AppImage">AppImage</a>.</li><li>Allow it to run in the file properties or run <code>chmod +x risco-0.1.0-linux-x86_64.AppImage</code>.</li><li>Open it with a double-click or run it from a terminal.</li></ol></article>
+    <article class="card"><h3>Install for your user · .tar.gz</h3><ol><li>Download and extract the <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-linux-x86_64.tar.gz">.tar.gz archive</a>.</li><li>From the extracted folder, run <code>./install.sh</code>. Risco installs into <code>~/.local</code> without administrator privileges.</li><li>To remove the application files, run <code>./install.sh --remove</code> from the same package folder.</li></ol></article>
+  </section>
+
+  <section><h2>Windows 10 or 11 · x64</h2>
+    <ol><li>Download and extract the <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-windows-x64.zip">ZIP archive</a>.</li><li>Open <code>Risco.exe</code>. If Windows reports a missing MSVC DLL, install the <a href="https://aka.ms/vc14/vc_redist.x64.exe">Microsoft Visual C++ v14 Redistributable x64</a>.</li></ol>
+  </section>
+
+  <section><h2>macOS · Apple Silicon</h2>
+    <ol><li>Download and extract the <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/risco-0.1.0-macos-arm64.zip">ZIP archive</a>, then open Risco.</li><li>The app is unsigned and not notarized. If macOS blocks the first launch, use System Settings → Privacy &amp; Security → Open Anyway.</li></ol>
+    <p>This package is for Apple Silicon; Intel Macs are not included.</p>
+  </section>
+  <p class="note">These are evaluation packages. Automated checks cover build, tests and startup on the listed systems; interface, fonts, audio and devices still need evaluation on personal computers. <a href="https://github.com/lucioaraujo/risco/releases/download/v0.1.0-rc1/SHA256SUMS">SHA256SUMS</a> · <a href="https://github.com/lucioaraujo/risco/tree/v0.1.0-rc1">source code</a>.</p>
+</main>
+<footer>RASGO · instruments, sound and research · <a href="https://github.com/lucioaraujo/risco">Public repository</a></footer>
+</body>
+</html>

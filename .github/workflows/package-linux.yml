@@ -1,0 +1,205 @@
+name: Risco Linux packages and launch matrix
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v0.1.0-rc*']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: risco-linux-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: 9.0.3
+          path: third_party/JUCE-9.0.3
+          persist-credentials: false
+
+      - name: Install build tools and Linux libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config file \
+            squashfs-tools dpkg-dev libasound2-dev libfreetype6-dev \
+            libfontconfig1-dev libx11-dev libxi-dev libxcomposite-dev \
+            libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev \
+            libgl1-mesa-dev
+
+      - name: Configure and build on Ubuntu 22.04
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DRISCO_BUILD_JUCE_APP=ON -DRISCO_PACKAGE_LINUX=ON \
+            -DRISCO_JUCE_SOURCE_DIR=third_party/JUCE-9.0.3
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure --timeout 600
+
+      - name: Build the Debian package
+        run: cpack --config build/CPackConfig.cmake -C Release -B packages
+
+      - name: Fetch pinned AppImage tooling
+        run: |
+          mkdir -p .local-build/tooling
+          curl --fail --location --connect-timeout 15 --max-time 90 \
+            --max-filesize 33554432 \
+            -o .local-build/tooling/linuxdeploy-x86_64.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          echo 'c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  .local-build/tooling/linuxdeploy-x86_64.AppImage' | sha256sum -c -
+          (cd packaging/linux/appimage/runtime && sha256sum -c SHA256SUMS)
+
+      - name: Build AppImage and installable tar.gz from the same CMake tree
+        run: |
+          timeout 420 bash packaging/linux/empacotar.sh build packages \
+            .local-build/tooling/linuxdeploy-x86_64.AppImage \
+            packaging/linux/appimage/runtime/runtime-x86_64 \
+            packaging/linux/appimage/runtime/LICENSE
+          (cd packages && sha256sum risco-0.1.0-linux-x86_64.deb \
+            risco-0.1.0-linux-x86_64.AppImage risco-0.1.0-linux-x86_64.tar.gz \
+            > SHA256SUMS)
+          (cd packages && sha256sum -c SHA256SUMS)
+
+      - name: Exercise the user-local installer and uninstaller
+        run: |
+          mkdir -p .local-build/installer-check
+          tar -xzf packages/risco-0.1.0-linux-x86_64.tar.gz -C .local-build/installer-check
+          test_home="$PWD/.local-build/installer-check/home"
+          mkdir -p "$test_home/Music/Risco"
+          : > "$test_home/Music/Risco/keep.risco"
+          package="$PWD/.local-build/installer-check/risco-0.1.0-linux-x86_64"
+          "$package/install.sh" --prefix "$test_home/.local"
+          test -x "$test_home/.local/bin/Risco"
+          "$package/install.sh" --remove --prefix "$test_home/.local"
+          test ! -e "$test_home/.local/bin/Risco"
+          test -f "$test_home/Music/Risco/keep.risco"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: risco-linux-packages
+          path: |
+            packages/risco-0.1.0-linux-x86_64.deb
+            packages/risco-0.1.0-linux-x86_64.AppImage
+            packages/risco-0.1.0-linux-x86_64.tar.gz
+            packages/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  launch:
+    needs: package
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        image: ['debian:12', 'ubuntu:24.04', 'fedora:latest', 'archlinux:latest']
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: risco-linux-packages
+          path: packages
+
+      - name: Install minimal desktop and runtime dependencies
+        run: |
+          case '${{ matrix.image }}' in
+            debian:*|ubuntu:*)
+              apt-get update
+              alsa=libasound2
+              case '${{ matrix.image }}' in ubuntu:24.04) alsa=libasound2t64 ;; esac
+              DEBIAN_FRONTEND=noninteractive apt-get install -y xvfb xauth openbox xdotool wmctrl \
+                "$alsa" libfontconfig1 libfreetype6 libx11-6 libxext6 libxcursor1 \
+                libxinerama1 libxrender1 libxrandr2 zlib1g fonts-dejavu-core python3
+              if test '${{ matrix.image }}' = debian:12 || test '${{ matrix.image }}' = ubuntu:24.04; then
+                apt-get install -y ./packages/risco-0.1.0-linux-x86_64.deb
+              fi
+              ;;
+            fedora:*)
+              dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth openbox xdotool wmctrl python3 \
+                alsa-lib fontconfig freetype libX11 libXext libXcursor libXinerama \
+                libXrender libXrandr zlib dejavu-sans-fonts
+              ;;
+            archlinux:*)
+              pacman -Syu --noconfirm xorg-server-xvfb xorg-xauth openbox xdotool wmctrl python \
+                alsa-lib fontconfig freetype2 libx11 libxext libxcursor libxinerama \
+                libxrender libxrandr zlib ttf-dejavu
+              ;;
+          esac
+
+      - name: Open the Debian package, AppImage and portable installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd packages && sha256sum -c SHA256SUMS)
+          mkdir -p .local-build/portable
+          tar -xzf packages/risco-0.1.0-linux-x86_64.tar.gz -C .local-build/portable
+          chmod +x packages/risco-0.1.0-linux-x86_64.AppImage
+          xvfb-run -a -s '-screen 0 1600x1000x24' bash -c '
+            set -euo pipefail
+            openbox >openbox.log 2>&1 & wm=$!; trap "kill $wm 2>/dev/null || true" EXIT; sleep 2
+            check_window() {
+              label="$1"; shift
+              "$@" >"$label.log" 2>&1 & app=$!
+              found=0
+              for i in $(seq 1 30); do
+                if wmctrl -l | grep -qi "Risco"; then found=1; break; fi
+                if ! kill -0 "$app" 2>/dev/null; then break; fi
+                sleep 1
+              done
+              test "$found" = 1 || { cat "$label.log"; echo "$label: no Risco window"; return 1; }
+              sleep 20
+              kill -0 "$app" || { cat "$label.log"; echo "$label: app exited"; return 1; }
+              wmctrl -l | grep -qi "Risco"
+              kill "$app"; wait "$app" 2>/dev/null || true
+            }
+            if test -x /usr/bin/Risco; then check_window deb /usr/bin/Risco; fi
+            check_window appimage env APPIMAGE_EXTRACT_AND_RUN=1 packages/risco-0.1.0-linux-x86_64.AppImage
+            prefix="$PWD/.local-build/portable/home/.local"
+            .local-build/portable/risco-0.1.0-linux-x86_64/install.sh --prefix "$prefix"
+            check_window portable "$prefix/bin/Risco"
+            .local-build/portable/risco-0.1.0-linux-x86_64/install.sh --remove --prefix "$prefix"
+          '
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v0.1.0-rc')
+    needs: [package, launch]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: risco-linux-packages
+          path: release
+      - name: Add the previously validated Windows and macOS evaluation archives
+        run: |
+          cp website/downloads/Risco-0.1.0-evaluation-windows-x86_64.zip release/risco-0.1.0-windows-x64.zip
+          cp website/downloads/Risco-0.1.0-evaluation-macos-arm64.zip release/risco-0.1.0-macos-arm64.zip
+          cd release
+          sha256sum risco-0.1.0-linux-x86_64.deb \
+            risco-0.1.0-linux-x86_64.AppImage risco-0.1.0-linux-x86_64.tar.gz \
+            risco-0.1.0-windows-x64.zip risco-0.1.0-macos-arm64.zip > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - name: Create the evaluation release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "Risco 0.1.0 — evaluation candidate" --prerelease --verify-tag \
+            --notes-file packaging/evaluation/NOTES.md \
+            release/risco-0.1.0-linux-x86_64.deb \
+            release/risco-0.1.0-linux-x86_64.AppImage \
+            release/risco-0.1.0-linux-x86_64.tar.gz \
+            release/risco-0.1.0-windows-x64.zip \
+            release/risco-0.1.0-macos-arm64.zip release/SHA256SUMS
