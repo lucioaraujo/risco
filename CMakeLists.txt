@@ -49,6 +49,11 @@ target_link_libraries(risco_formula_repository_smoke PRIVATE risco_core)
 
 add_executable(risco_compositional_criteria_check src/tools/compositional_criteria_check.cpp)
 target_link_libraries(risco_compositional_criteria_check PRIVATE risco_core)
+if(MSVC)
+    # This long legacy validation entry point intentionally keeps many fixed-capacity
+    # fixtures in scope; reserve extra stack for the test process, not the app.
+    target_link_options(risco_compositional_criteria_check PRIVATE /STACK:33554432)
+endif()
 enable_testing()
 add_test(NAME risco_compositional_criteria COMMAND risco_compositional_criteria_check)
 add_executable(risco_loudness_check src/tools/loudness_check.cpp)
