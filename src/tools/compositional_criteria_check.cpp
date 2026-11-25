@@ -1639,12 +1639,12 @@ int main() {
     shortPlacement.duration = shortPlacement.playLength = shortPlacement.cell.end = 0.1;
     shortPlacement.cell.count = 1;
     shortPlacement.cell.notes[0] = {0, 0.1, 440, 0.2f};
-    risco::SongRender dryRender(*tailSong, *tailPlayback, 0, true);
+    auto dryRender = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     tailSong->stemEffect[0] = 5;
-    risco::SongRender echoRender(*tailSong, *tailPlayback, 0, true);
+    auto echoRender = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double tailEnergy = 0;
     for (std::uint32_t i = 0; i < 24000; ++i) {
-        const auto dry = dryRender.frame(i), echo = echoRender.frame(i);
+        const auto dry = dryRender->frame(i), echo = echoRender->frame(i);
         if (!std::isfinite(echo.left) || !std::isfinite(echo.right)) return 184;
         if (i > 5280) {
             if (dry.left != 0 || dry.right != 0) return 185;
@@ -1724,10 +1724,10 @@ int main() {
     std::istringstream v43(prior);
     if (!risco::loadSong(v43, connectedLoaded) || connectedLoaded.stemDelayMix != mixedSong->stemDelayMix) return 203;
     tailSong->stemEffect[0] = 9;
-    risco::SongRender roomRender(*tailSong, *tailPlayback, 0, true);
+    auto roomRender = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double renderedTail = 0;
     for (std::uint32_t i = 0; i < 48000; ++i) {
-        const auto out = roomRender.frame(i);
+        const auto out = roomRender->frame(i);
         if (!std::isfinite(out.left) || !std::isfinite(out.right)) return 204;
         if (i > 5280) renderedTail += out.left * out.left + out.right * out.right;
     }
@@ -1778,12 +1778,12 @@ int main() {
     std::stringstream invalidCutoff;
     if (risco::saveSong(invalidCutoff, *mixedSong)) return 213;
     tailSong->stemEffect[0] = 1; tailSong->stemFilterCutoff[0] = 80;
-    risco::SongRender darkRender(*tailSong, *tailPlayback, 0, true);
+    auto darkRender = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     tailSong->stemFilterCutoff[0] = 16000;
-    risco::SongRender brightRender(*tailSong, *tailPlayback, 0, true);
+    auto brightRender = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double darkRendered = 0, brightRendered = 0;
     for (std::uint32_t i = 0; i < 4800; ++i) {
-        const auto dark = darkRender.frame(i), bright = brightRender.frame(i);
+        const auto dark = darkRender->frame(i), bright = brightRender->frame(i);
         if (i > 2400) { darkRendered += dark.left * dark.left; brightRendered += bright.left * bright.left; }
     }
     if (brightRendered <= 5 * darkRendered) return 214;
@@ -1830,12 +1830,12 @@ int main() {
     std::stringstream invalidRoomMix;
     if (risco::saveSong(invalidRoomMix, *mixedSong)) return 223;
     tailSong->stemEffect[0] = 9; tailSong->stemReverbMix[0] = 0;
-    risco::SongRender dryRoom(*tailSong, *tailPlayback, 0, true);
+    auto dryRoom = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     tailSong->stemReverbMix[0] = 0.6f;
-    risco::SongRender wetRoom(*tailSong, *tailPlayback, 0, true);
+    auto wetRoom = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double wetTail = 0;
     for (std::uint32_t i = 0; i < 48000; ++i) {
-        const auto dry = dryRoom.frame(i), wet = wetRoom.frame(i);
+        const auto dry = dryRoom->frame(i), wet = wetRoom->frame(i);
         if (i > 5280) {
             if (dry.left != 0 || dry.right != 0) return 224;
             wetTail += wet.left * wet.left + wet.right * wet.right;
@@ -1898,12 +1898,12 @@ int main() {
     std::stringstream invalidDecay;
     if (risco::saveSong(invalidDecay, *mixedSong)) return 234;
     tailSong->stemReverbDecay[0] = 0.25f;
-    risco::SongRender fastRoom(*tailSong, *tailPlayback, 0, true);
+    auto fastRoom = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     tailSong->stemReverbDecay[0] = 3;
-    risco::SongRender slowRoom(*tailSong, *tailPlayback, 0, true);
+    auto slowRoom = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double fastTail = 0, slowTail = 0;
     for (std::uint32_t i = 0; i < 96000; ++i) {
-        const auto fast = fastRoom.frame(i), slow = slowRoom.frame(i);
+        const auto fast = fastRoom->frame(i), slow = slowRoom->frame(i);
         if (i > 48000) { fastTail += fast.left * fast.left; slowTail += slow.left * slow.left; }
     }
     if (slowTail <= 10 * fastTail || slowTail < 1e-8) return 235;
@@ -1948,12 +1948,12 @@ int main() {
     std::stringstream invalidAutomation;
     if (risco::saveSong(invalidAutomation, *mixedSong)) return 244;
     tailSong->stemEffect[0] = 0; tailSong->stemAutomation[0] = {true, {{0.5f,0.5f,0.5f}}};
-    risco::SongRender halfVolume(*tailSong, *tailPlayback, 0, true);
+    auto halfVolume = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     tailSong->stemAutomation[0].enabled = false;
-    risco::SongRender fullVolume(*tailSong, *tailPlayback, 0, true);
+    auto fullVolume = std::make_unique<risco::SongRender>(*tailSong, *tailPlayback, 0, true);
     double halfEnergy = 0, fullEnergy = 0;
     for (std::uint32_t i = 0; i < 4800; ++i) {
-        const auto half = halfVolume.frame(i), full = fullVolume.frame(i);
+        const auto half = halfVolume->frame(i), full = fullVolume->frame(i);
         halfEnergy += half.left * half.left; fullEnergy += full.left * full.left;
     }
     if (fullEnergy <= 0 || std::abs(halfEnergy / fullEnergy - 0.25) > 0.00001) return 245;
@@ -2048,28 +2048,29 @@ int main() {
     filterSong->stemEffect[0] = 1;
     filterSong->stemFilterCutoff[0] = 80.0f;
     filterSong->stemFilterAutomation[0] = {true, {{80.0f, 16000.0f, 80.0f}}};
-    risco::SongRender movingFilter(*filterSong, *spatialPlayback, 0, true);
+    auto movingFilter = std::make_unique<risco::SongRender>(*filterSong, *spatialPlayback, 0, true);
     filterSong->stemFilterAutomation[0].enabled = false;
-    risco::SongRender fixedFilter(*filterSong, *spatialPlayback, 0, true);
+    auto fixedFilter = std::make_unique<risco::SongRender>(*filterSong, *spatialPlayback, 0, true);
     double filterDifference = 0.0;
     for (std::uint32_t i = 0; i < 24000; ++i) {
-        const auto moving = movingFilter.frame(i), fixed = fixedFilter.frame(i);
+        const auto moving = movingFilter->frame(i), fixed = fixedFilter->frame(i);
         if (i > 12000) filterDifference += std::abs(moving.left - fixed.left);
     }
     if (filterDifference < 1.0) return 318;
     auto leftSong = std::make_unique<risco::Song>();
     leftSong->stemPanAutomation[0] = {true,{{-1,-1,-1}}};
-    risco::SongRender leftRender(*leftSong,*spatialPlayback,0,true);
+    auto leftRender = std::make_unique<risco::SongRender>(*leftSong,*spatialPlayback,0,true);
     double leftEnergy = 0, rightEnergy = 0;
-    for (std::uint32_t i = 0; i < 4800; ++i) { const auto frame = leftRender.frame(i); leftEnergy += frame.left*frame.left; rightEnergy += frame.right*frame.right; }
+    for (std::uint32_t i = 0; i < 4800; ++i) { const auto frame = leftRender->frame(i); leftEnergy += frame.left*frame.left; rightEnergy += frame.right*frame.right; }
     if (leftEnergy <= 0 || rightEnergy > leftEnergy*1e-8) return 290;
     auto gatedSong = std::make_unique<risco::Song>();
     gatedSong->stemEffect[0] = 2; gatedSong->stemFxAutomation[0] = {true,{{false,true,false}}};
     auto bypassSong = std::make_unique<risco::Song>();
-    risco::SongRender gatedRender(*gatedSong,*spatialPlayback,0,true), bypassRender(*bypassSong,*spatialPlayback,0,true);
+    auto gatedRender = std::make_unique<risco::SongRender>(*gatedSong,*spatialPlayback,0,true);
+    auto bypassRender = std::make_unique<risco::SongRender>(*bypassSong,*spatialPlayback,0,true);
     double entranceDifference = 0, middleDifference = 0;
     for (std::uint32_t i = 0; i < 36000; ++i) {
-        const auto wet = gatedRender.frame(i), dry = bypassRender.frame(i);
+        const auto wet = gatedRender->frame(i), dry = bypassRender->frame(i);
         const double difference = std::abs(wet.left-dry.left)+std::abs(wet.right-dry.right);
         if (i < 8000) entranceDifference += difference;
         if (i >= 18000 && i < 26000) middleDifference += difference;
@@ -2395,10 +2396,10 @@ int main() {
     tailSong->stemAutomation[0].enabled = false;
     tailSong->stemEffect = {0,0,0};
     tailPlayback->timbreMode = 4; tailPlayback->ayNoisePeriod = 31;
-    risco::SongRender noiseRender(*tailSong,*tailPlayback,0,true);
+    auto noiseRender = std::make_unique<risco::SongRender>(*tailSong,*tailPlayback,0,true);
     double renderedNoise = 0;
     for (std::uint32_t i = 0; i < 4800; ++i) {
-        const auto out = noiseRender.frame(i);
+        const auto out = noiseRender->frame(i);
         const float expected = risco::songStemSampleAt(*tailPlayback,i/48000.0,0,risco::WaveMode::ayNoiseStudy);
         if (!std::isfinite(out.left) || std::abs(out.left - expected * 0.70710678118f) > 1e-6) return 21;
         renderedNoise += out.left * out.left;
@@ -2447,9 +2448,9 @@ int main() {
         if (risco::loadSong(invalid,connectedLoaded)) return 29;
     }
     tailPlayback->ayEnvelopeMode = 1; tailPlayback->ayEnvelopeRamp = 0.125f;
-    risco::SongRender envelopeRender(*tailSong,*tailPlayback,0,true);
+    auto envelopeRender = std::make_unique<risco::SongRender>(*tailSong,*tailPlayback,0,true);
     for (std::uint32_t i = 0; i < 4800; ++i) {
-        const auto out = envelopeRender.frame(i);
+        const auto out = envelopeRender->frame(i);
         const float expected = risco::songStemSampleAt(*tailPlayback,i/48000.0,0,risco::WaveMode::ayNoiseStudy);
         if (!std::isfinite(out.left) || std::abs(out.left - expected * 0.70710678118f) > 1e-6) return 30;
     }
