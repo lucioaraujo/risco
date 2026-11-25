@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="640" height="708" viewBox="0 0 640 708" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
+  <title>Risco — seis propostas vetoriais de logo para escolha</title>
+  <desc>Três composições sobre a palavra pixel original e três novas alternativas de letras pixeladas: arcade em blocos, trilhas modulares e contorno em mosaico. Nenhuma fonte tipográfica externa é usada nas marcas.</desc>
+  <defs>
+    <path id="risc" d="M4 4h3v3h-3zM7 4h3v3h-3zM10 4h3v3h-3zM13 4h3v3h-3zM4 7h3v3h-3zM16 7h3v3h-3zM4 10h3v3h-3zM16 10h3v3h-3zM4 13h3v3h-3zM7 13h3v3h-3zM10 13h3v3h-3zM13 13h3v3h-3zM4 16h3v3h-3zM10 16h3v3h-3zM4 19h3v3h-3zM13 19h3v3h-3zM4 22h3v3h-3zM16 22h3v3h-3zM27 4h3v3h-3zM30 4h3v3h-3zM33 4h3v3h-3zM30 7h3v3h-3zM30 10h3v3h-3zM30 13h3v3h-3zM30 16h3v3h-3zM30 19h3v3h-3zM27 22h3v3h-3zM30 22h3v3h-3zM33 22h3v3h-3zM47 4h3v3h-3zM50 4h3v3h-3zM53 4h3v3h-3zM56 4h3v3h-3zM44 7h3v3h-3zM44 10h3v3h-3zM47 13h3v3h-3zM50 13h3v3h-3zM53 13h3v3h-3zM56 16h3v3h-3zM56 19h3v3h-3zM44 22h3v3h-3zM47 22h3v3h-3zM50 22h3v3h-3zM53 22h3v3h-3zM70 4h3v3h-3zM73 4h3v3h-3zM76 4h3v3h-3zM79 4h3v3h-3zM67 7h3v3h-3zM67 10h3v3h-3zM67 13h3v3h-3zM67 16h3v3h-3zM67 19h3v3h-3zM70 22h3v3h-3zM73 22h3v3h-3zM76 22h3v3h-3zM79 22h3v3h-3z"/>
+    <path id="o" d="M93 4h3v3h-3zM96 4h3v3h-3zM99 4h3v3h-3zM90 7h3v3h-3zM102 7h3v3h-3zM90 10h3v3h-3zM102 10h3v3h-3zM90 13h3v3h-3zM102 13h3v3h-3zM90 16h3v3h-3zM102 16h3v3h-3zM90 19h3v3h-3zM102 19h3v3h-3zM93 22h3v3h-3zM96 22h3v3h-3zM99 22h3v3h-3z"/>
+  </defs>
+  <rect width="640" height="708" fill="#7893a5"/>
+  <rect x="16" y="12" width="608" height="104" rx="8" fill="#101b2d"/>
+  <text x="34" y="40" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">A</text>
+  <g transform="translate(112 27) scale(2.6)"><use xlink:href="#risc" fill="#55d6e8"/><use xlink:href="#o" fill="#ffc65c"/></g>
+  <path d="M120 99H352l13-7h47" fill="none" stroke="#55d6e8" stroke-width="3"/>
+  <rect x="407" y="88" width="7" height="7" fill="#ffc65c"/>
+
+  <rect x="16" y="128" width="608" height="104" rx="8" fill="#101b2d"/>
+  <text x="34" y="156" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">B</text>
+  <path d="M125 213l70-70M188 215l70-70" fill="none" stroke="#ffc65c" stroke-width="5" opacity="0.7"/>
+  <g transform="translate(112 143) scale(2.6)"><use xlink:href="#risc" fill="#e8f6fb"/><use xlink:href="#o" fill="#55d6e8"/></g>
+  <path d="M360 150h34v3h-34zM398 150h10v3h-10z" fill="#ffc65c"/>
+
+  <rect x="16" y="244" width="608" height="104" rx="8" fill="#101b2d"/>
+  <text x="34" y="272" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">C</text>
+  <rect x="96" y="253" width="396" height="86" rx="5" fill="#071522" stroke="#55d6e8" stroke-width="2"/>
+  <path d="M107 324h374M107 272h374" fill="none" stroke="#24405a" stroke-width="2"/>
+  <g transform="translate(112 259) scale(2.6)"><use xlink:href="#risc" fill="#55d6e8"/><use xlink:href="#o" fill="#ffc65c"/></g>
+  <rect x="387" y="263" width="3" height="68" fill="#ffc65c"/>
+
+  <rect x="16" y="360" width="608" height="104" rx="8" fill="#101b2d"/>
+  <text x="34" y="388" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">D · ARCADE EM BLOCOS</text>
+  <g transform="translate(142 390)" fill="none" stroke="#55d6e8" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M0 42V2H30V22H0M20 22L40 42"/>
+    <path d="M57 2H81M69 2V42M57 42H81" stroke="#ffc65c"/>
+    <path d="M134 2H94V22H134V42H94"/>
+    <path d="M187 2H147V42H187"/>
+    <path d="M200 2H240V42H200Z"/>
+  </g>
+
+  <rect x="16" y="476" width="608" height="104" rx="8" fill="#101b2d"/>
+  <text x="34" y="504" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">E · TRILHAS MODULARES</text>
+  <g transform="translate(142 506)" fill="none" stroke="#e8f6fb" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M0 42V2H30V22H0M20 22L40 42"/>
+    <path d="M57 2H81M69 2V42M57 42H81" stroke="#55d6e8"/>
+    <path d="M134 2H94V22H134V42H94" stroke="#ffc65c"/>
+    <path d="M187 2H147V42H187"/>
+    <path d="M200 2H240V42H200Z"/>
+    <path d="M7 9H23M7 15H23M7 29L15 37M154 10H180M154 34H180" stroke-width="1.5"/>
+  </g>
+
+  <rect x="16" y="592" width="608" height="100" rx="8" fill="#101b2d"/>
+  <text x="34" y="620" fill="#d5e9f2" font-family="DejaVu Sans Mono,monospace" font-size="15">F · CONTORNO EM MOSAICO</text>
+  <g transform="translate(142 622)" fill="none" stroke="#55d6e8" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M0 42V2H30V22H0M20 22L40 42M6 8H24M6 16H24"/>
+    <path d="M57 2H81M69 2V42M57 42H81" stroke="#ffc65c"/>
+    <path d="M134 2H94V22H134V42H94M101 9H127M101 35H127"/>
+    <path d="M187 2H147V42H187M154 9H180M154 35H180"/>
+    <path d="M200 2H240V42H200ZM207 9H233V35H207Z"/>
+  </g>
+</svg>

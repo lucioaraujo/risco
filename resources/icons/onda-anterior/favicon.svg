@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <title>Risco — onda em pixels e linha de escrita</title>
+  <desc>Onda de áudio em blocos quadrados, com a linha desviada da proposta A e um pixel âmbar como marcador. Desenho autoral, sem fonte externa.</desc>
+  <rect width="64" height="64" rx="8" fill="#101b2d"/>
+  <path fill="#55d6e8" d="M11 25h5v12h-5zM19 16h5v30h-5zM27 9h5v40h-5zM35 17h5v28h-5zM43 24h5v14h-5zM10 52h34v4H10zM44 49h4v7h-4zM48 49h4v4h-4z"/>
+  <rect x="52" y="45" width="7" height="7" fill="#ffc65c"/>
+</svg>

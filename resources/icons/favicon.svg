@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <title>Risco — linha transformada em onda quadrada assimétrica</title>
+  <desc>Linha contínua que se transforma em onda quadrada, com patamares de larguras e alturas diferentes e ponta âmbar. Proposta de ícone; não altera os ícones ativos.</desc>
+  <rect width="64" height="64" rx="8" fill="#101b2d"/>
+  <path fill="#55d6e8" d="M4 36h8v4H4zM12 16h4v24h-4zM16 16h12v4H16zM28 16h4v32h-4zM32 44h8v4h-8zM40 24h4v24h-4zM44 24h4v4h-4zM48 24h4v16h-4zM52 36h2v4h-2z"/>
+  <rect x="54" y="35" width="6" height="6" fill="#ffc65c"/>
+</svg>

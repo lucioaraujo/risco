@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Risco
+Comment=Generative composition instrument
+Comment[pt]=Instrumento de composição generativa
+Comment[fr]=Instrument de composition générative
+Comment[es]=Instrumento de composición generativa
+Exec=Risco
+Icon=risco
+Terminal=false
+Categories=AudioVideo;Audio;Music;
