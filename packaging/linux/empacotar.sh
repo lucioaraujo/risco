@@ -60,9 +60,9 @@ test "$(sha256sum "$RUNTIME_LICENSE" | cut -d ' ' -f 1)" = \
     aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2230f9c0ca1
 chmod +x "$LINUXDEPLOY"
 export APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 LDAI_OUTPUT="$OUTPUT/$NAME.AppImage"
+export LDAI_RUNTIME_FILE="$RUNTIME"
 (cd "$WORK" && "$LINUXDEPLOY" --appdir "$APPDIR" --executable "$BIN" \
-    --desktop-file "$DESKTOP" --icon-file "$ICON" --runtime "$RUNTIME" \
-    --runtime-license "$RUNTIME_LICENSE" --output appimage)
+    --desktop-file "$DESKTOP" --icon-file "$ICON" --output appimage)
 chmod +x "$OUTPUT/$NAME.AppImage"
 
 (cd "$OUTPUT" && sha256sum "$NAME.AppImage" "$NAME.tar.gz" > SHA256SUMS)
