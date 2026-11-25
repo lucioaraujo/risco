@@ -10,8 +10,9 @@ manual de interface e áudio. No Linux há `.deb`, AppImage e `.tar.gz` com
 instalação em `~/.local`; Windows e macOS vêm em arquivos ZIP portáteis. O
 macOS é apenas Apple Silicon e não está assinado/notarizado.
 
-Veja `SHA256SUMS` e `README.md` dentro de cada arquivo. O código-fonte
-correspondente está na tag `v0.1.0-evaluation`. Licenças e proveniência estão
+Veja `SHA256SUMS` e `README.md` dentro de cada arquivo. Os pacotes Linux são
+compilados do código na tag de pré-release que acompanha esta nota; os ZIPs de
+Windows e macOS vêm da tag `v0.1.0-evaluation`. Licenças e proveniência estão
 nos arquivos `NOTICE.md`, `LICENSE` e `CREDITOS_E_LICENCAS.md`.
 
 No Windows, se o sistema informar que falta uma DLL do runtime MSVC, instale o
@@ -27,9 +28,10 @@ interface or audio on personal computers. Linux provides a Debian package, an
 AppImage and a user-local-installable `.tar.gz`; Windows and macOS are portable
 ZIP archives. The macOS build is Apple Silicon only, unsigned and not notarized.
 
-See `SHA256SUMS` and the `README.md` inside each archive. Corresponding source
-is available at tag `v0.1.0-evaluation`. License and provenance information is
-in `NOTICE.md`, `LICENSE` and `CREDITOS_E_LICENCAS.md`.
+See `SHA256SUMS` and the `README.md` inside each archive. Linux packages are
+built from the source at the accompanying pre-release tag; the Windows and
+macOS ZIPs come from tag `v0.1.0-evaluation`. License and provenance
+information is in `NOTICE.md`, `LICENSE` and `CREDITOS_E_LICENCAS.md`.
 
 On Windows, if the system reports a missing MSVC runtime DLL, install the
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
@@ -45,10 +47,10 @@ AppImage et un `.tar.gz` installable dans `~/.local`; Windows et macOS sont
 fournis en archives ZIP portables. macOS est limité à Apple Silicon et n’est ni
 signé ni notarié.
 
-Voir `SHA256SUMS` et le `README.md` de chaque archive. Le code source
-correspondant est disponible au tag `v0.1.0-evaluation`. Les licences et la
-provenance sont décrites dans `NOTICE.md`, `LICENSE` et
-`CREDITOS_E_LICENCAS.md`.
+Voir `SHA256SUMS` et le `README.md` de chaque archive. Les paquets Linux sont
+construits depuis le code de la pré-version jointe ; les ZIP Windows et macOS
+proviennent du tag `v0.1.0-evaluation`. Les licences et la provenance sont
+décrites dans `NOTICE.md`, `LICENSE` et `CREDITOS_E_LICENCAS.md`.
 
 Sous Windows, si le système signale une DLL d’exécution MSVC manquante,
 installez le [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
@@ -63,10 +65,10 @@ evaluación manual de interfaz y audio. Linux ofrece `.deb`, AppImage y `.tar.gz
 instalable en `~/.local`; Windows y macOS se distribuyen como archivos ZIP
 portátiles. macOS es solo para Apple Silicon y no está firmado ni notarizado.
 
-Consulte `SHA256SUMS` y el `README.md` de cada archivo. El código fuente
-correspondiente está en la etiqueta `v0.1.0-evaluation`. Las licencias y la
-procedencia se explican en `NOTICE.md`, `LICENSE` y
-`CREDITOS_E_LICENCAS.md`.
+Consulte `SHA256SUMS` y el `README.md` de cada archivo. Los paquetes Linux se
+compilan desde el código de la versión preliminar adjunta; los ZIP de Windows
+y macOS proceden de la etiqueta `v0.1.0-evaluation`. Las licencias y la
+procedencia se explican en `NOTICE.md`, `LICENSE` y `CREDITOS_E_LICENCAS.md`.
 
 En Windows, si el sistema indica que falta una DLL del runtime MSVC, instale el
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).

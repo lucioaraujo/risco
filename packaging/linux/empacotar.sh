@@ -9,6 +9,9 @@ LINUXDEPLOY=${3:?missing pinned linuxdeploy}
 RUNTIME=${4:?missing pinned AppImage runtime}
 RUNTIME_LICENSE=${5:?missing AppImage runtime license}
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)
+LINUXDEPLOY=$(realpath "$LINUXDEPLOY")
+RUNTIME=$(realpath "$RUNTIME")
+RUNTIME_LICENSE=$(realpath "$RUNTIME_LICENSE")
 VERSION=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' "$BUILD/CMakeCache.txt")
 [[ -n "$VERSION" ]] || { echo "version not found in CMakeCache" >&2; exit 1; }
 ARCH=$(uname -m)
