@@ -75,11 +75,21 @@ jobs:
         if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
         run: ${{ matrix.test }} 2>&1 | tee test.log
+      - name: Diagnose Windows compositional test exit code
+        if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
+        shell: pwsh
+        run: |
+          & build/Release/risco_compositional_criteria_check.exe
+          $exitCode = $LASTEXITCODE
+          "Direct exit code: 0x{0:X8}" -f [uint32]$exitCode | Out-File -FilePath test-diagnostic.log -Append -Encoding utf8
+          exit 0
       - if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
         uses: actions/upload-artifact@v4
         with:
           name: risco-windows-test-log
-          path: test.log
+          path: |
+            test.log
+            test-diagnostic.log
           if-no-files-found: ignore
       - name: Confirm application artifact
         if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
