@@ -1,12 +1,15 @@
 # Risco — créditos, proveniência e direitos das fórmulas
 
-Atualizado em 2026-11-22. Direção artística, código e estudos iniciais da
+Atualizado em 2026-11-25. Direção artística, código e estudos iniciais da
 máquina de funções: **Lúcio de Araújo**. O código próprio do Risco e os quatro
 estudos iniciais gerados pela máquina V2 estão sob
 **GNU AGPL-3.0-or-later**, conforme [LICENSE](LICENSE). O método aritmético
 geral não é exclusivo; a licença identifica a expressão e a implementação
-autoral incluídas no projeto. O instrumento está em incubação e o repositório
-de código não foi publicado nesta etapa.
+autoral incluídas no projeto. O código-fonte está publicado em
+[`lucioaraujo/risco`](https://github.com/lucioaraujo/risco); os builds de
+avaliação 0.1.0 foram compilados e testados em três plataformas pela CI. A
+interface, dispositivos de áudio e fontes ainda aguardam verificação manual
+em computadores pessoais.
 
 O repositório local `Risco/formulas.riscolib`, criado no diretório de dados do
 usuário pelo aplicativo, é um **arquivo de performance**, não uma coleção
@@ -123,10 +126,10 @@ O CMake embute ambos no executável e o app registra as duas faces antes de
 abrir a janela. Os avisos e a licença que devem acompanhar qualquer pacote
 distribuído estão em [LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt)
 e na [página oficial DejaVu](https://dejavu-fonts.github.io/License.html).
-Isso fixa a fonte usada no canvas, na opção terminal e no editor de fórmula;
-testes em Windows e macOS continuam pendentes. As opções padrão e geométrica
-ainda dependem das fontes do sistema e precisam de decisão tipográfica antes
-de um release multiplataforma.
+Isso fixa a fonte usada no canvas, na opção terminal e no editor de fórmula.
+Build e CTest passaram em Windows x86_64 e macOS arm64; a conferência manual
+de fontes e da interface nesses sistemas continua pendente. As opções padrão
+e geométrica ainda dependem das fontes do sistema.
 
 `resources/RiscoPixelLogo.svg`, `src/app/RiscoLogo.hpp` e os seis estudos em
 `resources/RiscoLogosPropostas.svg` são desenho vetorial/pixel autoral do
