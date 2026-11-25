@@ -1,12 +1,6 @@
 name: Risco platform evaluation builds
 on:
   workflow_dispatch:
-    inputs:
-      platform:
-        description: Platform to build
-        type: choice
-        options: [all, linux-x86_64, windows-x86_64, macos]
-        default: all
   pull_request:
     paths:
       - "src/**"
@@ -43,7 +37,6 @@ jobs:
             test: ctest --test-dir build --output-on-failure
             binary: build/risco_app_artefacts/Release/Risco.app
     runs-on: ${{ matrix.os }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == matrix.name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
