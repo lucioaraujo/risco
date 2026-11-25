@@ -36,13 +36,13 @@ provenance and rights status. A formula library may contain third-party or
 user-created work and is not included here.
 
 Evaluation builds are available for Linux x86_64, Windows x86_64 and macOS
-arm64 in the [0.1.0 evaluation release](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0-evaluation).
+arm64 on the [Risco evaluation website](https://lucioaraujo.github.io/risco/#versoes).
 The full GitHub Actions matrix compiled all three targets and passed 12/12
 automated tests per platform in run
 [45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
 The builds have not been manually checked on personal devices for startup,
 audio hardware, fonts or interface behavior; the archives are not installers.
-See the release notes for platform limits and dependencies. The historical
+See the evaluation notes for platform limits and dependencies. The historical
 AY/YM engine documents its fidelity limits in
 [the AY/YM research notes](PESQUISA_NUCLEO_AY_FIEL.md). Additional research
 and design documents are included in this repository.
