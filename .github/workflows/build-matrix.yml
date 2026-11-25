@@ -1,6 +1,12 @@
 name: Risco platform evaluation builds
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to validate
+        type: choice
+        options: [all, linux-x86_64, windows-x86_64, macos]
+        default: all
   pull_request:
     paths:
       - "src/**"
@@ -39,35 +45,42 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
       - uses: actions/checkout@v4
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         with:
           repository: juce-framework/JUCE
           ref: 9.0.3
           path: third_party/JUCE-9.0.3
           persist-credentials: false
-      - if: runner.os == 'Linux'
+      - if: ${{ (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) && runner.os == 'Linux' }}
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev libxi-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libgl1-mesa-dev
-      - if: runner.os == 'macOS'
+      - if: ${{ (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) && runner.os == 'macOS' }}
         run: brew install ninja
       - name: Configure
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
         run: ${{ matrix.configure }} 2>&1 | tee configure.log
-      - if: failure() && runner.os == 'Windows'
+      - if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
         uses: actions/upload-artifact@v4
         with:
           name: risco-windows-configure-log
           path: configure.log
           if-no-files-found: ignore
       - name: Build
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
         run: ${{ matrix.build }}
       - name: Test
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
         run: ${{ matrix.test }}
       - name: Confirm application artifact
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         shell: bash
         run: test -e "${{ matrix.binary }}"
       - uses: actions/upload-artifact@v4
+        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
         with:
           name: risco-${{ matrix.name }}
           path: ${{ matrix.binary }}
