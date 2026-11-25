@@ -188,14 +188,14 @@ static bool checkInternalRests() {
         reordered->responses[0].cell.notes[0].start != 0.75) return false;
     std::swap(song->grid[0],song->grid[1]);
     std::stringstream saved;
-    risco::Song loaded;
-    if (!risco::saveSong(saved,*song) || !risco::loadSong(saved,loaded) || loaded.responsePolicy != 7) return false;
+    auto loaded = std::make_unique<risco::Song>();
+    if (!risco::saveSong(saved,*song) || !risco::loadSong(saved,*loaded) || loaded->responsePolicy != 7) return false;
     auto older = saved.str();
     removeTakeRecord(older);
     removeInputGestureCurveFields(older);
     older.replace(0,std::string("RISCO_SONG_V65").size(),"RISCO_SONG_V52");
     std::istringstream incompatible(older);
-    if (risco::loadSong(incompatible,loaded)) return false;
+    if (risco::loadSong(incompatible,*loaded)) return false;
     song->responsePolicy = 6;
     std::stringstream oldPolicy; if (!risco::saveSong(oldPolicy,*song)) return false;
     older = oldPolicy.str();
@@ -203,7 +203,7 @@ static bool checkInternalRests() {
     removeInputGestureCurveFields(older);
     older.replace(0,std::string("RISCO_SONG_V65").size(),"RISCO_SONG_V52");
     std::istringstream compatible(older);
-    if (!risco::loadSong(compatible,loaded) || loaded.responsePolicy != 6) return false;
+    if (!risco::loadSong(compatible,*loaded) || loaded->responsePolicy != 6) return false;
     song->responsePolicy = 7;
     // Boundaries are half-open: an ending note can meet a response attack.
     song->bank[1].formulaEvents.notes[0] = {2.25,0.5,220,0.2f};
@@ -338,14 +338,14 @@ static bool checkExtendedForms() {
     song->bank[0].phraseMeters = meters; song->bank[1].phraseMeters = meters;
     song->bank[0].phraseSectionBars = sectionBars;
     std::stringstream file;
-    risco::Song loaded;
-    if (!risco::saveSong(file,*song) || !risco::loadSong(file,loaded) ||
-        loaded.bank[0].phraseVersion != 8 || loaded.bank[1].phraseVersion != 9 ||
-        loaded.bank[0].phraseMeters != meters || loaded.bank[0].phraseSectionBars != sectionBars) return false;
+    auto loaded = std::make_unique<risco::Song>();
+    if (!risco::saveSong(file,*song) || !risco::loadSong(file,*loaded) ||
+        loaded->bank[0].phraseVersion != 8 || loaded->bank[1].phraseVersion != 9 ||
+        loaded->bank[0].phraseMeters != meters || loaded->bank[0].phraseSectionBars != sectionBars) return false;
     auto old = file.str();
     old.replace(0,std::string("RISCO_SONG_V65").size(),"RISCO_SONG_V54");
     std::istringstream unsupported(old);
-    if (risco::loadSong(unsupported,loaded)) return false;
+    if (risco::loadSong(unsupported,*loaded)) return false;
     return true;
 }
 
@@ -446,10 +446,10 @@ int main() {
         loaded->beatsPerBar != 5 || loaded->grid[0].repeats != 7 ||
         loaded->masterGain < 0.719f || loaded->masterGain > 0.721f ||
         loaded->interStemResponse != 9) return 4;
-    auto namedSnapshot = *song;
-    namedSnapshot.bpm = 96.0;
+    auto namedSnapshot = std::make_unique<risco::Song>(*song);
+    namedSnapshot->bpm = 96.0;
     std::stringstream namedSnapshotStream;
-    if (!risco::saveSong(namedSnapshotStream,namedSnapshot)) return 328;
+    if (!risco::saveSong(namedSnapshotStream,*namedSnapshot)) return 328;
     const std::vector<risco::NamedSongVersionRecord> namedVersions{{"Versão autoral",namedSnapshotStream.str()}};
     std::stringstream versionedProject;
     if (!risco::saveSong(versionedProject,*song,namedVersions,0) ||
@@ -461,13 +461,13 @@ int main() {
         restoredVersions.size() != 1 || restoredVersions[0].name != "Versão autoral" ||
         restoredVersions[0].parentIndex != -1 || restoredActiveVersion != 0) return 330;
     std::istringstream restoredSnapshotStream(restoredVersions[0].serializedSong);
-    risco::Song restoredSnapshot;
-    if (!risco::loadSong(restoredSnapshotStream,restoredSnapshot) || restoredSnapshot.bpm != 96.0) return 331;
-    auto childSnapshot = std::make_unique<risco::Song>(namedSnapshot);
+    auto restoredSnapshot = std::make_unique<risco::Song>();
+    if (!risco::loadSong(restoredSnapshotStream,*restoredSnapshot) || restoredSnapshot->bpm != 96.0) return 331;
+    auto childSnapshot = std::make_unique<risco::Song>(*namedSnapshot);
     childSnapshot->bpm = 112.0;
     std::stringstream childSnapshotStream;
     if (!risco::saveSong(childSnapshotStream,*childSnapshot)) return 366;
-    auto alternateSnapshot = std::make_unique<risco::Song>(namedSnapshot);
+    auto alternateSnapshot = std::make_unique<risco::Song>(*namedSnapshot);
     alternateSnapshot->bpm = 132.0;
     std::stringstream alternateSnapshotStream;
     if (!risco::saveSong(alternateSnapshotStream,*alternateSnapshot)) return 367;

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -21,7 +22,12 @@ bool save(const risco::Song& song, std::string& text) {
 }
 
 bool trackIsCompleteAndReproducible() {
-    risco::Song first, repeated, different;
+    auto firstStorage = std::make_unique<risco::Song>();
+    auto repeatedStorage = std::make_unique<risco::Song>();
+    auto differentStorage = std::make_unique<risco::Song>();
+    auto& first = *firstStorage;
+    auto& repeated = *repeatedStorage;
+    auto& different = *differentStorage;
     constexpr std::uint64_t seed = 0x72d4010abc309e55ULL;
     if (!risco::generateSeedTrack(seed, first) ||
         !risco::generateSeedTrack(seed, repeated) ||
@@ -48,7 +54,8 @@ bool trackIsCompleteAndReproducible() {
     }
     if (byStem != std::array<int, risco::Song::stemCount>{{16, 16, 16}}) return false;
 
-    risco::Song loaded;
+    auto loadedStorage = std::make_unique<risco::Song>();
+    auto& loaded = *loadedStorage;
     std::istringstream input(firstText);
     if (!risco::loadSong(input, loaded) || loaded.cellCount != 48 ||
         loaded.compositionSeed != seed || loaded.compositionSeedAlgorithm != risco::compositionSeedAlgorithmV1)
@@ -58,7 +65,8 @@ bool trackIsCompleteAndReproducible() {
     if (playback.count != 48 || std::abs(playback.end - expectedDuration) > 1.0e-8)
         return false;
 
-    risco::Song unchanged;
+    auto unchangedStorage = std::make_unique<risco::Song>();
+    auto& unchanged = *unchangedStorage;
     unchanged.bpm = 111.0;
     std::string before, after;
     if (!save(unchanged, before) || risco::generateSeedTrack(0, unchanged) ||
@@ -68,7 +76,12 @@ bool trackIsCompleteAndReproducible() {
 
 bool shapedFormsReturnAndDiffer() {
     constexpr std::uint64_t seed = 0x72d4010abc309e55ULL;
-    risco::Song arc, repeated, collage;
+    auto arcStorage = std::make_unique<risco::Song>();
+    auto repeatedStorage = std::make_unique<risco::Song>();
+    auto collageStorage = std::make_unique<risco::Song>();
+    auto& arc = *arcStorage;
+    auto& repeated = *repeatedStorage;
+    auto& collage = *collageStorage;
     const risco::SeedTrackOptions arcOptions{0.0, 64, risco::SeedTrackForm::arc, 1};
     const risco::SeedTrackOptions collageOptions{0.0, 64, risco::SeedTrackForm::collage, 2};
     if (!risco::generateSeedTrack(seed, arcOptions, arc) ||
@@ -113,7 +126,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     if (argc >= 2) {
-        risco::Song generated;
+        auto generatedStorage = std::make_unique<risco::Song>();
+        auto& generated = *generatedStorage;
         risco::SeedTrackOptions options;
         if (form == "arc") options.form = risco::SeedTrackForm::arc;
         if (form == "collage") {
