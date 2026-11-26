@@ -15,5 +15,6 @@ The four homepages share `style.css` and show the same 1920×1006 capture
 from the RC6 interface in English. The English tutorial explains how to
 switch the main controls and help to English.
 
+The RASGO family strip links back to the portal in the page's language.
 The repository's GitHub Pages workflow publishes the site. The general
 RASGO portal uses its own publication process.
