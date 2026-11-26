@@ -124,7 +124,7 @@ jobs:
               fi
               ;;
             fedora:*)
-              dnf install -y xorg-x11-server-Xvfb xorg-x11-utils python3 \
+              dnf install -y xorg-x11-server-Xvfb xwininfo python3 \
                 alsa-lib fontconfig freetype libX11 libXext libXcursor libXinerama \
                 libXrender libXrandr zlib dejavu-sans-fonts
               ;;
