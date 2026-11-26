@@ -16,5 +16,10 @@ from the RC6 interface in English. The English tutorial explains how to
 switch the main controls and help to English.
 
 The RASGO family strip links back to the portal in the page's language.
+The site uses the original pixel wordmark from `resources/RiscoPixelLogo.svg`
+and the approved asymmetric-wave icons from `resources/icons/`. The web
+copies are in `assets/identity/`. Every page declares the SVG, PNG and ICO
+favicons and the Apple touch icon. The wordmark appears in the header and
+on each home page.
 The repository's GitHub Pages workflow publishes the site. The general
 RASGO portal uses its own publication process.
