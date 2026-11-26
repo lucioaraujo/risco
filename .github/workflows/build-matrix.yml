@@ -1,11 +1,17 @@
 name: Risco platform evaluation builds
 on:
+  workflow_call:
+    inputs:
+      platform:
+        description: Platform group to validate
+        type: string
+        default: all
   workflow_dispatch:
     inputs:
       platform:
         description: Platform to validate
         type: choice
-        options: [all, linux-x86_64, windows-x86_64, macos]
+        options: [all, linux-x86_64, windows-x86_64, macos, windows-macos]
         default: all
   pull_request:
     paths:
@@ -43,40 +49,46 @@ jobs:
             test: ctest --test-dir build --output-on-failure
             binary: build/risco_app_artefacts/Release/Risco.app
     runs-on: ${{ matrix.os }}
+    env:
+      BUILD_PLATFORM: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name || (inputs.platform == 'windows-macos' && matrix.name != 'linux-x86_64') }}
     steps:
       - uses: actions/checkout@v4
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
       - uses: actions/checkout@v4
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
         with:
           repository: juce-framework/JUCE
           ref: 9.0.3
           path: third_party/JUCE-9.0.3
           persist-credentials: false
-      - if: ${{ (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) && runner.os == 'Linux' }}
+      - if: ${{ (env.BUILD_PLATFORM == 'true') && runner.os == 'Linux' }}
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libfreetype6-dev libfontconfig1-dev libx11-dev libxi-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libgl1-mesa-dev
-      - if: ${{ (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) && runner.os == 'macOS' }}
+      - if: ${{ (env.BUILD_PLATFORM == 'true') && runner.os == 'macOS' }}
         run: brew install ninja
       - name: Configure
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
         shell: bash
-        run: ${{ matrix.configure }} 2>&1 | tee configure.log
-      - if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
+        run: |
+          set -o pipefail
+          ${{ matrix.configure }} 2>&1 | tee configure.log
+      - if: ${{ failure() && runner.os == 'Windows' && (env.BUILD_PLATFORM == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: risco-windows-configure-log
           path: configure.log
           if-no-files-found: ignore
       - name: Build
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
         shell: bash
         run: ${{ matrix.build }}
       - name: Test
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
         shell: bash
-        run: ${{ matrix.test }} 2>&1 | tee test.log
+        run: |
+          set -o pipefail
+          ${{ matrix.test }} 2>&1 | tee test.log
       - name: Diagnose Windows compositional test exit code
-        if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
+        if: ${{ failure() && runner.os == 'Windows' && (env.BUILD_PLATFORM == 'true') }}
         shell: pwsh
         run: |
           $exe = Join-Path $PWD 'build/Release/risco_compositional_criteria_check.exe'
@@ -88,20 +100,65 @@ jobs:
           $exitCode = $LASTEXITCODE
           Add-Content -Path test.log -Value ("Direct exit code: {0} (0x{0:X8})" -f $exitCode)
           exit 0
-      - if: ${{ failure() && runner.os == 'Windows' && (inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name) }}
+      - if: ${{ failure() && runner.os == 'Windows' && (env.BUILD_PLATFORM == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: risco-windows-test-log
           path: test.log
           if-no-files-found: ignore
       - name: Confirm application artifact
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' }}
         shell: bash
         run: test -e "${{ matrix.binary }}"
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.platform == '' || inputs.platform == 'all' || inputs.platform == matrix.name }}
+        if: ${{ env.BUILD_PLATFORM == 'true' && inputs.platform != 'windows-macos' }}
         with:
           name: risco-${{ matrix.name }}
           path: ${{ matrix.binary }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build portable Windows or macOS archive
+        if: ${{ env.BUILD_PLATFORM == 'true' && inputs.platform == 'windows-macos' }}
+        shell: bash
+        env:
+          RISCO_BINARY: ${{ matrix.binary }}
+        run: |
+          set -eu
+          case "$RUNNER_OS" in
+            Windows) platform=windows; name=risco-0.1.0-windows-x64.zip ;;
+            macOS)
+              test "$(uname -m)" = arm64
+              test "$(lipo -archs "$RISCO_BINARY/Contents/MacOS/Risco")" = arm64
+              platform=macos; name=risco-0.1.0-macos-arm64.zip ;;
+            *) exit 1 ;;
+          esac
+          stage="build/portable"
+          mkdir -p "$stage/$platform/licenses"
+          cp -R "$RISCO_BINARY" "$stage/$platform/"
+          cp LICENSE CREDITOS_E_LICENCAS.md "$stage/$platform/"
+          cp third_party/JUCE-9.0.3/LICENSE.md "$stage/$platform/licenses/JUCE-LICENSE.md"
+          cp third_party/ayumi/LICENSE "$stage/$platform/licenses/Ayumi-LICENSE"
+          cp third_party/ayumi/README-RISCO.md "$stage/$platform/licenses/Ayumi-README.md"
+          cp resources/fonts/LICENSE-DejaVu.txt "$stage/$platform/licenses/DejaVu-LICENSE.txt"
+          cat > "$stage/$platform/README.md" <<EOF
+          # Risco — $GITHUB_REF_NAME
+
+          Extract this archive and open Risco.exe on Windows or Risco.app on macOS.
+          The installation guide explains system requirements and startup warnings:
+          https://lucioaraujo.github.io/risco/instalacao-en.html
+
+          Corresponding source: https://github.com/$GITHUB_REPOSITORY/tree/$GITHUB_SHA
+          See LICENSE, CREDITOS_E_LICENCAS.md and licenses/ for authorship and license terms.
+          EOF
+          if [ "$platform" = macos ]; then
+            ditto -c -k --keepParent "$stage/$platform" "$stage/$name"
+          else
+            (cd "$stage" && cmake -E tar cf "$name" --format=zip -- "$platform")
+          fi
+      - uses: actions/upload-artifact@v4
+        if: ${{ env.BUILD_PLATFORM == 'true' && inputs.platform == 'windows-macos' }}
+        with:
+          name: risco-portable-${{ matrix.name }}
+          path: build/portable/risco-*.zip
           if-no-files-found: error
           retention-days: 14

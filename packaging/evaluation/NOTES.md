@@ -2,85 +2,66 @@
 
 ## Português
 
-Os arquivos desta versão foram compilados para Linux x86_64, Windows x86_64 e
-macOS arm64. Os 12 testes automatizados passaram em cada plataforma na
-[matriz GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Isso verifica compilação e testes automatizados; não substitui a avaliação
-manual de interface e áudio. No Linux há `.deb`, AppImage e `.tar.gz` com
-instalação em `~/.local`; Windows e macOS vêm em arquivos ZIP portáteis. O
-macOS é apenas Apple Silicon e não está assinado/notarizado.
+O seletor PT/EN/FR/ES atualiza os botões da janela principal, os controles
+dos diálogos e os textos do guia rápido. Alguns menus avançados e mensagens
+ainda usam português.
 
-Veja `SHA256SUMS` e `README.md` dentro de cada arquivo. Os pacotes Linux são
-compilados do código na tag de pré-release que acompanha esta nota; a abertura
-dos três formatos foi verificada em Debian 12, Ubuntu 24.04, Fedora 45 e Arch
-na [matriz Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
-Os ZIPs de Windows e macOS vêm da tag `v0.1.0-evaluation`. Licenças e
-proveniência estão nos arquivos `NOTICE.md`, `LICENSE` e
-`CREDITOS_E_LICENCAS.md`.
+Linux x86_64 tem `.deb`, AppImage e `.tar.gz` instalável pelo usuário.
+Windows x64 e macOS Apple Silicon têm ZIPs portáteis. A publicação depende
+dos testes de build e dos testes de abertura dos três formatos Linux em
+Debian, Ubuntu, Fedora e Arch. A avaliação de áudio e interface em máquinas
+de usuários ainda está em andamento.
 
-No Windows, se o sistema informar que falta uma DLL do runtime MSVC, instale o
-[Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
+Veja o [guia de instalação](https://lucioaraujo.github.io/risco/instalacao.html),
+`SHA256SUMS` e os arquivos de licença e créditos. Os cinco pacotes vêm do
+código da mesma tag.
 
 ## English
 
-These archives were built for Linux x86_64, Windows x86_64 and macOS arm64.
-All 12 automated tests passed on each platform in
-[GitHub Actions run 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-This checks compilation and automated tests; it does not verify startup,
-interface or audio on personal computers. Linux provides a Debian package, an
-AppImage and a user-local-installable `.tar.gz`; Windows and macOS are portable
-ZIP archives. The macOS build is Apple Silicon only, unsigned and not notarized.
+The PT/EN/FR/ES selector updates the main window buttons, dialog controls
+and quick-start instructions. Some advanced menus and messages still use
+Portuguese.
 
-See `SHA256SUMS` and the `README.md` inside each archive. Linux packages are
-built from the source at the accompanying pre-release tag; startup of all
-three formats was checked in Debian 12, Ubuntu 24.04, Fedora 45 and Arch in
-[Linux matrix 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
-The Windows and macOS ZIPs come from tag `v0.1.0-evaluation`. License and
-provenance information is in `NOTICE.md`, `LICENSE` and
-`CREDITOS_E_LICENCAS.md`.
+Linux x86_64 has a Debian package, AppImage and a user-local installable
+`.tar.gz`. Windows x64 and Apple Silicon Macs have portable ZIP archives.
+Publication depends on automated build tests and startup checks for the
+three Linux formats on Debian, Ubuntu, Fedora and Arch. Audio and interface
+evaluation on user computers is still in progress.
 
-On Windows, if the system reports a missing MSVC runtime DLL, install the
-[Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
+See the [installation guide](https://lucioaraujo.github.io/risco/instalacao-en.html),
+`SHA256SUMS` and the license and credits files. All five packages use the
+source at the same tag.
 
 ## Français
 
-Ces archives ont été compilées pour Linux x86_64, Windows x86_64 et macOS
-arm64. Les 12 tests automatisés ont réussi sur chaque plateforme dans
-[l’exécution GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Cela vérifie la compilation et les tests automatisés, sans remplacer une
-évaluation manuelle de l’interface et de l’audio. Linux propose un `.deb`, un
-AppImage et un `.tar.gz` installable dans `~/.local`; Windows et macOS sont
-fournis en archives ZIP portables. macOS est limité à Apple Silicon et n’est ni
-signé ni notarié.
+Le sélecteur PT/EN/FR/ES actualise les boutons de la fenêtre principale,
+les commandes des dialogues et le guide rapide. Certains menus avancés
+et messages restent en portugais.
 
-Voir `SHA256SUMS` et le `README.md` de chaque archive. Les paquets Linux sont
-construits depuis le code de la pré-version jointe ; le démarrage des trois
-formats a été vérifié sur Debian 12, Ubuntu 24.04, Fedora 45 et Arch dans la
-[matrice Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
-Les ZIP Windows et macOS proviennent du tag `v0.1.0-evaluation`. Les licences
-et la provenance sont décrites dans `NOTICE.md`, `LICENSE` et
-`CREDITOS_E_LICENCAS.md`.
+Linux x86_64 propose un paquet Debian, une AppImage et une archive
+`.tar.gz` installable dans l’espace utilisateur. Windows x64 et les Mac
+avec puce Apple ont des archives ZIP portables. La publication dépend des
+tests automatisés et du démarrage des trois formats Linux sous Debian,
+Ubuntu, Fedora et Arch. L’évaluation du son et de l’interface sur les
+ordinateurs des utilisateurs se poursuit.
 
-Sous Windows, si le système signale une DLL d’exécution MSVC manquante,
-installez le [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
+Consultez le [guide d’installation](https://lucioaraujo.github.io/risco/instalacao-fr.html),
+`SHA256SUMS` et les fichiers de licence et de crédits. Les cinq paquets
+proviennent du code de la même version.
 
 ## Español
 
-Estos archivos se compilaron para Linux x86_64, Windows x86_64 y macOS arm64.
-Las 12 pruebas automatizadas pasaron en cada plataforma en la
-[ejecución de GitHub Actions 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-Esto verifica la compilación y las pruebas automatizadas, sin sustituir la
-evaluación manual de interfaz y audio. Linux ofrece `.deb`, AppImage y `.tar.gz`
-instalable en `~/.local`; Windows y macOS se distribuyen como archivos ZIP
-portátiles. macOS es solo para Apple Silicon y no está firmado ni notarizado.
+El selector PT/EN/FR/ES actualiza los botones de la ventana principal,
+los controles de los diálogos y la guía inicial. Algunos menús avanzados
+y mensajes siguen en portugués.
 
-Consulte `SHA256SUMS` y el `README.md` de cada archivo. Los paquetes Linux se
-compilan desde el código de la versión preliminar adjunta; el inicio de los
-tres formatos se comprobó en Debian 12, Ubuntu 24.04, Fedora 45 y Arch en la
-[matriz Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
-Los ZIP de Windows y macOS proceden de la etiqueta `v0.1.0-evaluation`. Las
-licencias y la procedencia se explican en `NOTICE.md`, `LICENSE` y
-`CREDITOS_E_LICENCAS.md`.
+Linux x86_64 ofrece un paquete Debian, una AppImage y un archivo
+`.tar.gz` instalable en el espacio de usuario. Windows x64 y los Mac con
+chip de Apple tienen ZIP portátiles. La publicación depende de las pruebas
+automatizadas y de las pruebas de arranque de los tres formatos Linux en
+Debian, Ubuntu, Fedora y Arch. Sigue en curso la evaluación de audio e
+interfaz en equipos de usuarios.
 
-En Windows, si el sistema indica que falta una DLL del runtime MSVC, instale el
-[Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
+Consulte la [guía de instalación](https://lucioaraujo.github.io/risco/instalacao-es.html),
+`SHA256SUMS` y los archivos de licencia y créditos. Los cinco paquetes
+se construyen desde el código de la misma etiqueta.

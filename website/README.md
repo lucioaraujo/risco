@@ -11,6 +11,10 @@ GitHub pre-release; `robots.txt` blocks indexing while the author reviews the
 pages and a later portal publication remains pending. Remove that restriction
 only when the review and publication gates are complete.
 
-The four pages share `style.css` and use the real control names so a reader can
-follow the app. To publish this review version, use the repository's GitHub
-Pages workflow. The general RASGO portal is a separate publication step.
+The four homepages share `style.css` and show the same 1920×1006 capture
+from the updated Linux app in English. The caption distinguishes the newer
+interface from the RC5 downloads. The English tutorial describes the
+controls by function and explains the RC5 language limitation.
+
+The repository's GitHub Pages workflow publishes the site. The general
+RASGO portal uses its own publication process.

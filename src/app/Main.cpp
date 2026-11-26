@@ -219,9 +219,9 @@ private:
         };
         static const juce::String tutorial[4] = {
                 utf8("FLUXO: DE ONDE VEM O SOM?\n\nTEXTO ou DESENHO ── Ouvir texto/desenho ──> SOM AO VIVO (fora da grade)\n       └── Guardar célula ──> BANCO ── Inserir célula ──> GRADE\n\nTEXTO / DESENHO / NÚMERO ── origem do seed ── Gerar + tocar\n       └──> NOVA FÓRMULA BYTEBEAT ──> som ao vivo\n                    └──> guardada no BANCO + colocada na GRADE\n\nFÓRMULA DIGITADA ── Compilar fórmula ── Ouvir fórmula (ao vivo)\n       ├── Guardar célula ──> BANCO; com REC, também entra na GRADE\n       └── Fórmula → notas ── pré-escuta; Guardar frase ──> célula no BANCO + GRADE\n\nBANCO = materiais guardados nesta música. GRADE = sequência de células que forma a música. Material no banco não toca na música completa até entrar na grade.\n\nPARA COMPOR: comece com uma célula curta; ouça a prévia, coloque-a na grade e ouça a música. Repita ou varie a célula para criar reconhecimento; acrescente outra para resposta ou contraste. Use BPM para mudar o pulso e arraste os blocos para escolher início e duração. Tocar música executa a grade; Salvar grava banco e grade no arquivo da performance. Salvar e Abrir abrem o seletor do sistema: escolha pasta e nome do arquivo; Salvar acrescenta .risco. Não há salvamento automático; use Salvar antes de fechar. O banco da música começa vazio em nova abertura; o repositório de fórmulas é local, persistente e independente. As cores da tela indicam ao vivo, gerar, banco e grade."),
-            utf8("QUICK START\n\n1 · LISTEN. “Ouvir texto/desenho” plays the writing or drawing. “Ouvir fórmula” plays the Bytebeat expression. “Ouvir célula” plays only the selected cell. “Tocar música” plays the entire grid. “Parar” stops audio.\n\n2 · CREATE. Draw up to 12 strokes; sound follows the gesture. To derive a formula from the drawing, choose “Desenho” as seed source and press “Gerar + tocar”. “Compilar fórmula” prepares a typed expression.\n\n3 · SAVE AND ARRANGE. “Guardar célula” stores material in the bank. Click an empty lane to place a cell; drag its center horizontally to move in time or vertically to change between three stems. Drag the left edge to choose the source start and the right edge to set its length. Shift+drag marks a loop range.\n\n4 · PERFORM. BPM sets tempo, MASTER sets volume, and REC records generated material. The stems organize cells and still share one output mix. “Início” restarts playback; “Salvar” writes the song file."),
-            utf8("PRISE EN MAIN\n\n1 · ÉCOUTER. « Ouvir texto/desenho » joue l'écriture ou le dessin. « Ouvir fórmula » joue l'expression Bytebeat. « Ouvir célula » joue la cellule choisie. « Tocar música » joue toute la grille. « Parar » arrête le son.\n\n2 · CRÉER. Dessinez jusqu'à 12 traits ; le son suit le geste. Pour créer une formule à partir du dessin, choisissez « Desenho » comme source de graine, puis « Gerar + tocar ». « Compilar fórmula » prépare une expression saisie.\n\n3 · CONSERVER ET ARRANGER. « Guardar célula » place le matériau dans la banque. Cliquez sur une ligne vide pour insérer une cellule ; faites glisser son centre horizontalement pour la déplacer dans le temps, verticalement pour changer entre les trois stems. Les bords règlent le fragment source et sa durée. Maj+glisser marque une boucle.\n\n4 · JOUER. BPM règle le tempo, MASTER le volume et REC enregistre les générations. Les stems organisent les cellules mais partagent encore un mixage. « Início » redémarre ; « Salvar » enregistre le fichier musical."),
-            utf8("INICIO RÁPIDO\n\n1 · ESCUCHAR. « Ouvir texto/desenho » reproduce el texto o dibujo. « Ouvir fórmula » reproduce la expresión Bytebeat. « Ouvir célula » reproduce solo la célula elegida. « Tocar música » reproduce toda la cuadrícula. « Parar » detiene el sonido.\n\n2 · CREAR. Dibuje hasta 12 trazos; el sonido sigue el gesto. Para generar una fórmula desde el dibujo, elija « Desenho » como origen de seed y pulse « Gerar + tocar ». « Compilar fórmula » prepara una expresión escrita.\n\n3 · GUARDAR Y ORGANIZAR. « Guardar célula » pone el material en el banco. Haga clic en una fila vacía para insertar; arrastre el centro horizontalmente para mover en el tiempo y verticalmente para cambiar entre los tres stems. Los bordes ajustan el fragmento fuente y la duración. Mayús+arrastrar marca un loop.\n\n4 · TOCAR. BPM ajusta el tempo, MASTER el volumen y REC registra lo generado. Los stems organizan las células, pero comparten una sola mezcla. « Início » reinicia; « Salvar » guarda el archivo musical.")
+            utf8("QUICK START\n\n1 · LISTEN. “Play text/drawing” plays the writing or drawing. “Play formula” plays the Bytebeat expression. “Play cell” plays only the selected cell. “Play song” plays the entire grid. “Stop” stops audio.\n\n2 · CREATE. Draw up to 12 strokes; sound follows the gesture. To derive a formula from the drawing, choose “Drawing” as seed source and press “Generate + play”. “Compile formula” prepares a typed expression.\n\n3 · SAVE AND ARRANGE. “Store cell” stores material in the bank. Click an empty lane to place a cell; drag its center horizontally to move in time or vertically to change between three stems. Drag the left edge to choose the source start and the right edge to set its length. Shift+drag marks a loop range.\n\n4 · PERFORM. BPM sets tempo, MASTER sets volume, and REC records generated material. The stems organize cells and still share one output mix. “Restart” restarts playback; “Save / WAV” writes the song file."),
+            utf8("PRISE EN MAIN\n\n1 · ÉCOUTER. « Écouter texte/dessin » joue l'écriture ou le dessin. « Écouter formule » joue l'expression Bytebeat. « Écouter cellule » joue la cellule choisie. « Jouer morceau » joue toute la grille. « Arrêter » arrête le son.\n\n2 · CRÉER. Dessinez jusqu'à 12 traits ; le son suit le geste. Pour créer une formule à partir du dessin, choisissez « Dessin » comme source de graine, puis « Générer + jouer ». « Compiler formule » prépare une expression saisie.\n\n3 · CONSERVER ET ARRANGER. « Garder cellule » place le matériau dans la banque. Cliquez sur une ligne vide pour insérer une cellule ; faites glisser son centre horizontalement pour la déplacer dans le temps, verticalement pour changer entre les trois stems. Les bords règlent le fragment source et sa durée. Maj+glisser marque une boucle.\n\n4 · JOUER. BPM règle le tempo, MASTER le volume et REC enregistre les générations. Les stems organisent les cellules mais partagent encore un mixage. « Début » redémarre ; « Sauver / WAV » enregistre le fichier musical."),
+            utf8("INICIO RÁPIDO\n\n1 · ESCUCHAR. « Oír texto/dibujo » reproduce el texto o dibujo. « Oír fórmula » reproduce la expresión Bytebeat. « Oír célula » reproduce solo la célula elegida. « Tocar pieza » reproduce toda la cuadrícula. « Detener » detiene el sonido.\n\n2 · CREAR. Dibuje hasta 12 trazos; el sonido sigue el gesto. Para generar una fórmula desde el dibujo, elija « Dibujo » como origen de seed y pulse « Generar + tocar ». « Compilar fórmula » prepara una expresión escrita.\n\n3 · GUARDAR Y ORGANIZAR. « Guardar célula » pone el material en el banco. Haga clic en una fila vacía para insertar; arrastre el centro horizontalmente para mover en el tiempo y verticalmente para cambiar entre los tres stems. Los bordes ajustan el fragmento fuente y la duración. Mayús+arrastrar marca un loop.\n\n4 · TOCAR. BPM ajusta el tempo, MASTER el volumen y REC registra lo generado. Los stems organizan las células, pero comparten una sola mezcla. « Inicio » reinicia; « Guardar / WAV » guarda el archivo musical.")
         };
         juce::String text = topic == 1 ? tutorial[language] : copy[topic][language];
         if (topic == 2) {
@@ -929,7 +929,6 @@ public:
         addAndMakeVisible(reuseFormulaButton);
         addAndMakeVisible(importCatalogButton);
         addAndMakeVisible(automationEditorButton);
-        automationEditorButton.setButtonText(utf8("CURVAS"));
         automationEditorButton.setTooltip(utf8("Abrir o editor visual compacto das automações do stem. Três pontos fixos, persistidos no V69."));
         automationEditorButton.onClick = [this] {
             refreshAutomationEditor();
@@ -992,12 +991,11 @@ public:
         addAndMakeVisible(learnButton);
         addAndMakeVisible(helpOverlay);
         helpOverlay.setVisible(false);
-        updateHelpLabels();
         aboutButton.onClick = [this] { openHelp(0); };
         tutorialButton.onClick = [this] { openHelp(1); };
         learnButton.onClick = [this] { openHelp(2); };
         languageSelect.onChange = [this] {
-            updateHelpLabels();
+            updateInterfaceLanguage();
         };
         fontSelect.addItem(utf8("Fonte: padrão"), 1);
         fontSelect.addItem(utf8("Fonte: terminal"), 2);
@@ -1005,7 +1003,6 @@ public:
         fontSelect.setSelectedId(2, juce::dontSendNotification);
         fontSelect.onChange = [this] { retroLookAndFeel.setFontStyle(fontSelect.getSelectedId() - 1); sendLookAndFeelChange(); repaint(); };
         addAndMakeVisible(ledSourceButton);
-        ledSourceButton.setButtonText(utf8("Digitar texto"));
         ledSourceButton.setTooltip(utf8("Abre o texto neste quadro; em seguida, use Desenhar para voltar ao traço."));
         ledSourceButton.onClick = [this] {
             setTextEntryMode(!textEntryMode, true);
@@ -1792,9 +1789,7 @@ public:
             label->setColour(juce::Label::textColourId, juce::Colour(0xffd4e5ee));
             label->setBorderSize({0, 6, 0, 6});
         }
-        showActivity(utf8("Aguardando tarefa"));
         addAndMakeVisible(albumMenuButton);
-        albumMenuButton.setButtonText(utf8("Álbum…"));
         albumMenuButton.setTooltip(utf8("Planeja as faixas ou renderiza os WAVs de um álbum já criado."));
         albumMenuButton.onClick = [this] {
             const bool busy = (albumJob && albumJob->isThreadRunning()) ||
@@ -1810,31 +1805,19 @@ public:
                     if (choice == 2) safeThis->openAlbumRenderChooser();
                 });
         };
-        play.setButtonText(utf8("Ouvir texto/desenho"));
         play.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b8b79));
         play.setTooltip(utf8("Ouve o texto ou desenho atual ao vivo, fora da grade da música."));
-        cross.setButtonText(utf8("Riscar último"));
-        clear.setButtonText("Limpar");
-        glyph.setButtonText("Leitura / glifo");
-        functionMode.setButtonText(utf8("Função 8 bits"));
         functionMode.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff65529a));
         functionMode.setTooltip(utf8("Ativa a fórmula de onda bytebeat aplicada abaixo."));
-        loopMode.setButtonText("Loop: OFF");
         loopMode.setClickingTogglesState(true);
         loopMode.setToggleState(false, juce::dontSendNotification);
-        storeCellButton.setButtonText(utf8("Guardar célula"));
         storeCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
         storeCellButton.setTooltip(utf8("Guarda no banco desta música. Use Salvar para conservar a performance ao fechar o app."));
-        updateCellButton.setButtonText("Atualizar");
         updateCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
-        placeCellButton.setButtonText(utf8("Inserir célula"));
         placeCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffa87526));
         placeCellButton.setTooltip(utf8("Insere a célula selecionada no tempo indicado. Também é possível clicar num espaço vazio da grade."));
-        previewCellButton.setButtonText(utf8("Ouvir célula"));
         previewCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b8b79));
         previewCellButton.setTooltip(utf8("Toca somente a célula escolhida no banco; se seu bloco está selecionado na grade, ouve o trecho recortado."));
-        playSongButton.setButtonText(utf8("Tocar música"));
-        seedTrackButton.setButtonText(utf8("Faixa completa…"));
         seedTrackButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffffc658));
         seedTrackButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff252432));
         seedTrackButton.setTooltip(utf8("Gera uma composição de 64 compassos. Depois de revisar e salvar, toca do início ao fim."));
@@ -1844,10 +1827,8 @@ public:
             button->setColour(juce::TextButton::textColourOnId, juce::Colour(0xff142b26));
         }
         playSongButton.setTooltip(utf8("Toca a música que está na grade. Clique em Faixa completa para gerar uma música nova."));
-        restartSongButton.setButtonText(utf8("Início"));
         restartSongButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
         restartSongButton.setTooltip(utf8("Volta ao início da música; se um loop de trecho estiver ativo, reinicia no início dele."));
-        loopRangeButton.setButtonText(utf8("Loop trecho"));
         loopRangeButton.setClickingTogglesState(true);
         loopRangeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffa87526));
         loopRangeButton.setTooltip(utf8("Shift+arraste na grade para escolher um trecho; este botão liga ou desliga sua repetição."));
@@ -1864,16 +1845,12 @@ public:
             gridScrollBeat = 0.0;
             repaint();
         };
-        undoGridButton.setButtonText(utf8("Desfazer"));
         undoGridButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
         undoGridButton.setTooltip(utf8("Desfaz a última edição da grade (Ctrl+Z / Cmd+Z). O banco permanece intacto."));
         undoGridButton.onClick = [this] { undoGridEdit(); };
         undoGridButton.setEnabled(false);
-        saveButton.setButtonText(utf8("Salvar / WAV"));
         saveButton.setTooltip(utf8("Salvar conserva o projeto editável. Escolha Formato WAV: PCM16 ou PCM24 / 48 kHz; exporte mix ou stems (até 10 min), com volume/pan, MASTER e proteção. Não inclui mute/solo nem onda personalizada ativa só na sessão."));
-        openButton.setButtonText("Abrir");
         openButton.setTooltip(utf8("Abre um arquivo de música e restaura o banco e a grade salvos."));
-        removeLastButton.setButtonText(utf8("Retirar célula"));
         removeLastButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffa87526));
         removeLastButton.setTooltip(utf8("Retira da grade o bloco selecionado; se nada estiver selecionado, retira o último."));
         functionMode.setClickingTogglesState(true);
@@ -1888,14 +1865,12 @@ public:
             formulaEnabled.store(functionMode.getToggleState(), std::memory_order_release);
             if (functionMode.getToggleState()) timbreSelect.setSelectedId(1);
         };
-        applyFormula.setButtonText(utf8("Compilar fórmula"));
         applyFormula.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff65529a));
         applyFormula.setTooltip(utf8("Compila a fórmula escrita. Com REC ON, também a guarda no banco e a coloca na grade. Sem REC, use Ouvir fórmula e depois Guardar célula + Inserir célula."));
         applyFormula.onClick = [this] {
             timbreSelect.setSelectedId(1);
             if (compileAndApplyFormula() && recButton.getToggleState()) appendFormulaToBank();
         };
-        formulaToNotesButton.setButtonText(utf8("Fórmula → notas"));
         formulaToNotesButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
         formulaToNotesButton.setTooltip(utf8("Abre pré-escuta, subdivisão e swing da fórmula. Acompanhar/Guiar acorde também oferecem progressão e duração dos acordes. Guardar frase conserva escolhas e eventos na célula."));
         formulaToNotesButton.onClick = [this] {
@@ -1975,7 +1950,6 @@ public:
                     previewFormulaAsNotes();
                 });
         };
-        saveFormulaNotesButton.setButtonText(utf8("Guardar frase"));
         saveFormulaNotesButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffa87526));
         saveFormulaNotesButton.setTooltip(utf8("Guarda fórmula, escala, tônica e movimento como célula e acrescenta a frase ao fim da grade."));
         saveFormulaNotesButton.onClick = [this] { saveFormulaEventsToArrangement(); };
@@ -2105,7 +2079,6 @@ public:
                 ? -1 : formulaGroupingSelect.getSelectedId() - 2;
         };
         refreshMetricGroupingOptions();
-        generateFormulaButton.setButtonText(utf8("Gerar + tocar"));
         generateFormulaButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff65529a));
         generateFormulaButton.setTooltip(utf8("Cada fórmula gerada vai para o banco e para a grade; o repositório local de fórmulas persiste entre músicas. A música precisa ser salva em arquivo para conservar sua performance."));
         generateFormulaButton.onClick = [this] {
@@ -2118,11 +2091,8 @@ public:
         };
         repositorySelect.setTextWhenNothingSelected(utf8("Repositório de funções"));
         repositorySelect.setTooltip(utf8("Biblioteca local persistente, independente do banco e do arquivo da música atual."));
-        reuseFormulaButton.setButtonText("Reusar");
         reuseFormulaButton.onClick = [this] { reuseSelectedFormula(); };
-        importCatalogButton.setButtonText(utf8("Importar catálogo"));
         importCatalogButton.onClick = [this] { chooseFormulaCatalog(); };
-        varyPhraseButton.setButtonText(utf8("Variar frase"));
         varyPhraseButton.setTooltip(utf8("Escolha formas V2–V9 e gere a pré-escuta. V7 usa estado matemático; V8 cria arco com ápice; V9 desenvolve e retorna. Marque/desmarque ou edite seções, guarde takes e mantenha ao menos uma ativa. A receita acompanha a célula salva."));
         varyPhraseButton.onClick = [this] {
             juce::PopupMenu forms;
@@ -2295,7 +2265,6 @@ public:
                         appendGeneratedPhrase();
                 });
         };
-        recButton.setButtonText("REC");
         recButton.setClickingTogglesState(true);
         recButton.setTooltip(utf8("Registra cada nova função no banco e acrescenta à grade da performance."));
         recButton.onClick = [this] {
@@ -2304,7 +2273,6 @@ public:
                 : utf8("REC pausado — material já gravado permanece na performance."),
                 juce::dontSendNotification);
         };
-        autoPhraseButton.setButtonText(utf8("Auto: frases"));
         autoPhraseButton.setTooltip(utf8("Gera frases sucessivas na forma selecionada em Variar frase e as insere automaticamente na música. Desative para parar."));
         autoPhraseButton.setClickingTogglesState(true);
         autoPhraseButton.onClick = [this] {
@@ -2322,7 +2290,6 @@ public:
                 showActivity(utf8("Frases auto desligadas · grade preservada"));
             }
         };
-        autoMode.setButtonText(utf8("Fórmula auto"));
         autoMode.setTooltip(utf8("Ouve e gera sucessivas fórmulas sonoras. Para uma composição do início ao fim, use Faixa completa."));
         autoMode.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff65529a));
         autoMode.setClickingTogglesState(true);
@@ -2337,7 +2304,6 @@ public:
             }
         };
         compileAndApplyFormula();
-        directMode.setButtonText(utf8("Ouvir fórmula"));
         directMode.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b8b79));
         directMode.setTooltip(utf8("Pré-escuta Bytebeat ao vivo, fora da música. Desative para parar essa pré-escuta."));
         directMode.setClickingTogglesState(true);
@@ -2372,7 +2338,6 @@ public:
                 status.setText(utf8("Leitura por notas retomada."), juce::dontSendNotification);
             }
         };
-        resetDirectButton.setButtonText("Reiniciar t");
         resetDirectButton.onClick = [this] {
             resetDirect.store(true, std::memory_order_release);
             nextAutoTick = phraseCycleTicks();
@@ -2381,7 +2346,6 @@ public:
         loopMode.onClick = [this] {
             const bool enabled = loopMode.getToggleState();
             loopEnabled.store(enabled, std::memory_order_release);
-            loopMode.setButtonText(enabled ? utf8("Loop em tempo real: ativo") : "Loop: desligado");
             if (enabled && active.load(std::memory_order_acquire) != nullptr)
                 playing.store(true, std::memory_order_release);
         };
@@ -2517,7 +2481,7 @@ public:
         status.setColour(juce::Label::backgroundColourId, juce::Colour(0xff17283a));
         status.setColour(juce::Label::textColourId, juce::Colour(0xffe0f6ff));
         status.setBorderSize({0, 6, 0, 6});
-        status.setText(utf8("Faixa completa gera uma música. Ouvir texto/desenho toca o material da entrada."),
+        status.setText(uiText("Faixa completa gera uma música. Ouvir texto/desenho toca o material da entrada.", "Full track generates a song. Play text/drawing plays your input.", "Morceau complet génère une pièce. Écouter texte/dessin joue votre entrée.", "Pieza completa genera una pieza. Oír texto/dibujo reproduce la entrada."),
                        juce::dontSendNotification);
         play.onClick = [this] { playInscription(); };
         storeCellButton.onClick = [this] { storeCurrentCell(); };
@@ -2543,8 +2507,8 @@ public:
                 bankSearchDialog = std::make_unique<juce::AlertWindow>(utf8("Buscar no banco"),
                     utf8("Nome, fórmula, origem ou ID. Vazio mostra todo o banco."), juce::MessageBoxIconType::NoIcon);
                 bankSearchDialog->addTextEditor("query", bankQuery, utf8("Busca:"));
-                bankSearchDialog->addButton(utf8("Buscar"), 1, juce::KeyPress(juce::KeyPress::returnKey));
-                bankSearchDialog->addButton(utf8("Cancelar"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
+                bankSearchDialog->addButton(uiText("Buscar", "Search", "Rechercher", "Buscar"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+                bankSearchDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
                 juce::Component::SafePointer<MainComponent> safeThis(this);
                 bankSearchDialog->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, selected](int result) {
                     if (!safeThis || !safeThis->bankSearchDialog) return;
@@ -2618,7 +2582,6 @@ public:
                 : utf8("Reiniciado do começo da reprodução."), juce::dontSendNotification);
             repaint();
         };
-        stopButton.setButtonText(utf8("Parar"));
         stopButton.onClick = [this] {
             playing.store(false, std::memory_order_release);
             previewingCell = false;
@@ -2628,7 +2591,6 @@ public:
             autoPhraseButton.setToggleState(false, juce::dontSendNotification);
             loopEnabled.store(false, std::memory_order_release);
             loopMode.setToggleState(false, juce::dontSendNotification);
-            loopMode.setButtonText("Loop: desligado");
             active.store(nullptr, std::memory_order_release);
             activeSong.store(nullptr, std::memory_order_release);
             status.setText(utf8("Reprodução parada."), juce::dontSendNotification);
@@ -2778,7 +2740,7 @@ public:
         };
         loadLocalFormulaLibrary();
         refreshRepository();
-        refreshToggleDisplays();
+        updateInterfaceLanguage();
         refreshFormulaGridStatus();
         setSize(1280, 900);
         // The packaged GUI can also be inspected in a container with no
@@ -3089,19 +3051,23 @@ public:
                                               brandHorizontalScale +
                                  brandGap * brandHorizontalScale;
         risco::app::paintRiscoPixelLogo(g, brandWordX, 7.0f, brandHorizontalScale);
-        const std::array<std::pair<const char*, juce::Colour>, 4> flowLegend{{
-            {"AO VIVO", livePath}, {"GERAR", seedPath}, {"BANCO", bankPath}, {"GRADE", gridPath}}};
+        const std::array<std::pair<juce::String, juce::Colour>, 4> flowLegend{{
+            {uiText("AO VIVO", "LIVE", "DIRECT", "EN VIVO"), livePath},
+            {uiText("GERAR", "GENERATE", "GÉNÉRER", "GENERAR"), seedPath},
+            {uiText("BANCO", "BANK", "BANQUE", "BANCO"), bankPath},
+            {uiText("GRADE", "GRID", "GRILLE", "CUADRÍCULA"), gridPath}}};
         g.setFont(canvasFont(juce::Font(juce::FontOptions(9.0f, juce::Font::bold))));
         int legendX = 250;
         for (const auto& item : flowLegend) {
             g.setColour(item.second);
             g.fillRect(float(legendX), 35.0f, 6.0f, 6.0f);
-            drawCanvasText(g, utf8(item.first), legendX + 10, 31, 53, 15, juce::Justification::left);
+            drawCanvasText(g, item.first, legendX + 10, 31, 53, 15, juce::Justification::left);
             legendX += 65;
         }
         g.setColour(juce::Colour(0xff91adbd));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(10.0f))));
-        drawCanvasText(g, utf8("INSTRUMENTO GENERATIVO  ·  RASGO"),
+        drawCanvasText(g, uiText("INSTRUMENTO GENERATIVO  ·  RASGO", "GENERATIVE INSTRUMENT  ·  RASGO",
+            "INSTRUMENT GÉNÉRATIF  ·  RASGO", "INSTRUMENTO GENERATIVO  ·  RASGO"),
                    juce::roundToInt(brandVisibleX), 31, 300, 13,
                    juce::Justification::left);
         const auto marquee = juce::Rectangle<int>(80, 242, logicalWidth - 160, 68);
@@ -3126,8 +3092,9 @@ public:
                    marquee.getX() + 28, marquee.getY() + 3, marquee.getWidth() - 170, 20,
                    juce::Justification::left, true);
         g.setColour(juce::Colour(0xff55d6e8));
-        drawCanvasText(g, directReadout ? utf8("LEITOR · BYTEBEAT") :
-                   drawOnLed ? utf8("LEITOR · DESENHO") : utf8("LEITOR · TEXTO"),
+        drawCanvasText(g, directReadout ? uiText("LEITOR · BYTEBEAT", "READER · BYTEBEAT", "LECTEUR · BYTEBEAT", "LECTOR · BYTEBEAT") :
+                   drawOnLed ? uiText("LEITOR · DESENHO", "READER · DRAWING", "LECTEUR · DESSIN", "LECTOR · DIBUJO") :
+                               uiText("LEITOR · TEXTO", "READER · TEXT", "LECTEUR · TEXTE", "LECTOR · TEXTO"),
                    marquee.getRight() - 140, marquee.getY() + 3, 126, 20,
                    juce::Justification::right, true);
         const float panelX = float(marquee.getX() + 16), panelW = float(marquee.getWidth() - 32);
@@ -3565,6 +3532,98 @@ private:
                             juce::roundToInt(float(height) * scaleY()));
     }
 
+    juce::String uiText(const char* pt, const char* en, const char* fr, const char* es) const {
+        const char* texts[] = {pt, en, fr, es};
+        return utf8(texts[std::clamp(languageSelect.getSelectedId() - 1, 0, 3)]);
+    }
+
+    void updateInterfaceLanguage() {
+        updateHelpLabels();
+        automationEditorButton.setButtonText(uiText("CURVAS", "CURVES", "COURBES", "CURVAS"));
+        albumMenuButton.setButtonText(uiText("Álbum…", "Album…", "Album…", "Álbum…"));
+        cross.setButtonText(uiText("Riscar último", "Cross last", "Barrer dernier", "Tachar último"));
+        clear.setButtonText(uiText("Limpar", "Clear", "Effacer", "Limpiar"));
+        glyph.setButtonText(uiText("Leitura / glifo", "Reading / glyph", "Lecture / glyphe", "Lectura / glifo"));
+        storeCellButton.setButtonText(uiText("Guardar célula", "Store cell", "Garder cellule", "Guardar célula"));
+        updateCellButton.setButtonText(uiText("Atualizar", "Update", "Actualiser", "Actualizar"));
+        placeCellButton.setButtonText(uiText("Inserir célula", "Place cell", "Placer cellule", "Insertar célula"));
+        seedTrackButton.setButtonText(uiText("Faixa completa…", "Full track…", "Morceau complet…", "Pieza completa…"));
+        restartSongButton.setButtonText(uiText("Início", "Restart", "Début", "Inicio"));
+        undoGridButton.setButtonText(uiText("Desfazer", "Undo", "Annuler", "Deshacer"));
+        saveButton.setButtonText(uiText("Salvar / WAV", "Save / WAV", "Sauver / WAV", "Guardar / WAV"));
+        openButton.setButtonText(uiText("Abrir", "Open", "Ouvrir", "Abrir"));
+        removeLastButton.setButtonText(uiText("Retirar célula", "Remove cell", "Retirer cellule", "Retirar célula"));
+        applyFormula.setButtonText(uiText("Compilar fórmula", "Compile formula", "Compiler formule", "Compilar fórmula"));
+        formulaToNotesButton.setButtonText(uiText("Fórmula → notas", "Formula → notes", "Formule → notes", "Fórmula → notas"));
+        saveFormulaNotesButton.setButtonText(uiText("Guardar frase", "Store phrase", "Garder phrase", "Guardar frase"));
+        reuseFormulaButton.setButtonText(uiText("Reusar", "Reuse", "Réutiliser", "Reutilizar"));
+        importCatalogButton.setButtonText(uiText("Importar catálogo", "Import catalog", "Importer catalogue", "Importar catálogo"));
+        varyPhraseButton.setButtonText(uiText("Variar frase", "Vary phrase", "Varier phrase", "Variar frase"));
+        resetDirectButton.setButtonText(uiText("Reiniciar t", "Reset t", "Relancer t", "Reiniciar t"));
+        stopButton.setButtonText(uiText("Parar", "Stop", "Arrêter", "Detener"));
+        updateControlChoices();
+        refreshInputButtonLabel();
+        refreshGenerateButtonLabel();
+        refreshToggleDisplays();
+        refreshActivityLabel();
+        refreshGenerationStatus();
+        repaint();
+    }
+
+    static void setChoiceText(juce::ComboBox& box, int id, const juce::String& text) {
+        const bool selected = box.getSelectedId() == id;
+        box.changeItemText(id, text);
+        if (selected) box.setSelectedId(id, juce::dontSendNotification);
+    }
+
+    void updateControlChoices() {
+        setChoiceText(fontSelect, 1, uiText("Fonte: padrão", "Font: default", "Police : défaut", "Fuente: predet."));
+        setChoiceText(fontSelect, 2, uiText("Fonte: terminal", "Font: terminal", "Police : terminal", "Fuente: terminal"));
+        setChoiceText(fontSelect, 3, uiText("Fonte: geométrica", "Font: geometric", "Police : géométrique", "Fuente: geométrica"));
+        setChoiceText(shapeSelect, 1, uiText("Shape: desligado", "Shape: off", "Shape : désactivé", "Shape: apagado"));
+        setChoiceText(shapeSelect, 3, uiText("Shape: cúbica", "Shape: cubic", "Shape : cubique", "Shape: cúbica"));
+        setChoiceText(shapeSelect, 4, uiText("Shape: dobra", "Shape: fold", "Shape : pliage", "Shape: pliegue"));
+        setChoiceText(seedSource, 1, uiText("Número", "Number", "Nombre", "Número"));
+        setChoiceText(seedSource, 2, uiText("Texto", "Text", "Texte", "Texto"));
+        setChoiceText(seedSource, 3, uiText("Desenho", "Drawing", "Dessin", "Dibujo"));
+        setChoiceText(seedSource, 4, uiText("Glitch: máscara", "Glitch: mask", "Glitch : masque", "Glitch: máscara"));
+        setChoiceText(stemSelect, 4, uiText("Sugerir posição", "Suggest placement", "Suggérer position", "Sugerir posición"));
+        setChoiceText(stemSelect, 5, uiText("Equilibrar som", "Balance sound", "Équilibrer le son", "Equilibrar sonido"));
+        setChoiceText(cellSpan, 1, uiText("1 tempo", "1 beat", "1 temps", "1 pulso"));
+        setChoiceText(cellSpan, 2, uiText("1 compasso", "1 bar", "1 mesure", "1 compás"));
+        setChoiceText(cellSpan, 4, uiText("2 compassos", "2 bars", "2 mesures", "2 compases"));
+        setChoiceText(cellSpan, 3, uiText("4 compassos", "4 bars", "4 mesures", "4 compases"));
+        setChoiceText(formulaMotionSelect, 1, uiText("Seguir", "Follow", "Suivre", "Seguir"));
+        setChoiceText(formulaMotionSelect, 2, uiText("Contrapor", "Counter", "Opposer", "Contraponer"));
+        setChoiceText(formulaMotionSelect, 3, uiText("Transfigurar", "Transfigure", "Transfigurer", "Transfigurar"));
+        setChoiceText(formulaMotionSelect, 4, uiText("Encadear", "Link", "Enchaîner", "Encadenar"));
+        setChoiceText(formulaMotionSelect, 5, uiText("Cadenciar", "Cadence", "Cadencer", "Cadenciar"));
+        setChoiceText(formulaMotionSelect, 6, uiText("Acompanhar", "Accompany", "Accompagner", "Acompañar"));
+        setChoiceText(formulaMotionSelect, 7, uiText("Guiar acorde", "Guide chords", "Guider accords", "Guiar acordes"));
+        setChoiceText(responseModeSelect, 1, uiText("Resposta: desligada", "Response: off", "Réponse : désactivée", "Respuesta: apagada"));
+        setChoiceText(formulaGroupingSelect, 1, uiText("Grupo: automático", "Group: automatic",
+                                                       "Groupe : automatique", "Grupo: automático"));
+        updateTimbreLabels();
+        setChoiceText(formulaScaleSelect, 1, uiText("Escala: maior", "Scale: major", "Gamme : majeure", "Escala: mayor"));
+        for (int count = 1; count <= repetitions.getNumItems(); ++count)
+            setChoiceText(repetitions, count, juce::String(count) + (count == 1
+                ? uiText(" vez", " repeat", " répétition", " vez")
+                : uiText(" vezes", " repeats", " répétitions", " veces")));
+        const char* englishNotes[] = {"C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭",
+                                     "G", "G♯/A♭", "A", "A♯/B♭", "B"};
+        const char* solfegeNotes[] = {"Do", "Do♯/Ré♭", "Ré", "Ré♯/Mi♭", "Mi", "Fa",
+                                     "Fa♯/Sol♭", "Sol", "Sol♯/La♭", "La", "La♯/Si♭", "Si"};
+        const char* portugueseNotes[] = {"Dó", "Dó♯/Ré♭", "Ré", "Ré♯/Mi♭", "Mi", "Fá",
+                                        "Fá♯/Sol♭", "Sol", "Sol♯/Lá♭", "Lá", "Lá♯/Si♭", "Si"};
+        for (int i = 0; i < 12; ++i)
+            setChoiceText(formulaTonicSelect, i + 1, uiText("Tom: ", "Key: ", "Ton : ", "Tono: ")
+                + uiText(portugueseNotes[i], englishNotes[i], solfegeNotes[i], solfegeNotes[i]));
+        cellName.setTextToShowWhenEmpty(uiText("Nome da célula", "Cell name", "Nom de cellule", "Nombre de célula"),
+                                        juce::Colours::grey);
+        repositorySelect.setTextWhenNothingSelected(uiText("Repositório de funções", "Formula library",
+                                                            "Bibliothèque de formules", "Biblioteca de fórmulas"));
+    }
+
     void updateHelpLabels() {
         const int language = std::clamp(languageSelect.getSelectedId() - 1, 0, 3);
         const juce::String about[] = {utf8("Sobre"), "About", utf8("À propos"), utf8("Acerca de")};
@@ -3579,6 +3638,12 @@ private:
             {"Libre", "Puls.", "Basse", "Harm.", "Mél.", "Text."},
             {"Libre", "Pulso", "Bajo", "Armon.", "Melod.", "Text."}
         };
+        const char* cellRoles[4][6] = {
+            {"livre", "pulso", "baixo", "harmonia", "melodia", "textura"},
+            {"free", "pulse", "bass", "harmony", "melody", "texture"},
+            {"libre", "pulsation", "basse", "harmonie", "mélodie", "texture"},
+            {"libre", "pulso", "bajo", "armonía", "melodía", "textura"}
+        };
         const juce::String stemRoleTips[4] = {
             utf8("Papel pretendido desta pista. A sugestão de posição favorece células com papel correspondente."),
             "Intended role for this lane. Placement suggestions favor cells with a matching role.",
@@ -3587,15 +3652,16 @@ private:
         };
         for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
             auto& selector = stemRoleSelect[static_cast<size_t>(stem)];
-            const int selectedRole = selector.getSelectedId();
+            const int selectedRole = int(song.stemRole[static_cast<size_t>(stem)]) + 1;
             selector.clear(juce::dontSendNotification);
             for (int role = 0; role < 6; ++role)
                 selector.addItem(utf8(stemRoles[language][role]), role + 1);
             selector.setSelectedId(selectedRole, juce::dontSendNotification);
             selector.setTooltip(stemRoleTips[language]);
         }
+        for (int role = 0; role < 6; ++role)
+            setChoiceText(roleSelect, role + 1, "P: " + utf8(cellRoles[language][role]));
         helpOverlay.setLanguage(languageSelect.getSelectedId());
-        repaint();
     }
 
     void openHelp(int topic) {
@@ -3623,6 +3689,15 @@ private:
         meterSelect.setSelectedId(song.compoundSixEight ? 8 : song.beatsPerBar, juce::dontSendNotification);
     }
 
+    void updateTimbreLabels() {
+        setChoiceText(timbreSelect, 1, uiText("Seno / função", "Sine / function", "Sinus / fonction", "Seno / función"));
+        setChoiceText(timbreSelect, 3, uiText("AY · tons", "AY · tones", "AY · tons", "AY · tonos"));
+        setChoiceText(timbreSelect, 4, uiText("AY · misto", "AY · mixed", "AY · mixte", "AY · mixto"));
+        setChoiceText(timbreSelect, 5, uiText("AY · ruído", "AY · noise", "AY · bruit", "AY · ruido"));
+        setChoiceText(timbreSelect, 6, uiText("AY-3-8910 · histórico", "AY-3-8910 · historical", "AY-3-8910 · historique", "AY-3-8910 · histórico"));
+        setChoiceText(timbreSelect, 7, uiText("YM2149 · histórico", "YM2149 · historical", "YM2149 · historique", "YM2149 · histórico"));
+    }
+
     void refreshTimbreChoices() {
         timbreSelect.clear(juce::dontSendNotification);
         timbreSelect.addItem(utf8("Seno / função"), 1);
@@ -3632,6 +3707,7 @@ private:
         timbreSelect.addItem(utf8("AY · ruído"), 5);
         timbreSelect.addItem(utf8("AY-3-8910 · histórico"), 6);
         timbreSelect.addItem(utf8("YM2149 · histórico"), 7);
+        updateTimbreLabels();
         juce::PopupMenu periods;
         for (int period : {1,2,4,8,16,31}) periods.addItem(100 + period, juce::String(period), true, song.ayNoisePeriod == period);
         timbreSelect.getRootMenu()->addSubMenu(utf8("AY · período do ruído: ") + juce::String(song.ayNoisePeriod), periods);
@@ -4096,7 +4172,7 @@ private:
         const int count = risco::formulaMetricGroupingCount(beats);
         if (song.formulaMetricGrouping >= count) song.formulaMetricGrouping = -1;
         formulaGroupingSelect.clear(juce::dontSendNotification);
-        formulaGroupingSelect.addItem(utf8("Grupo: automático"), 1);
+        formulaGroupingSelect.addItem(uiText("Grupo: automático", "Group: automatic", "Groupe : automatique", "Grupo: automático"), 1);
         if (beats >= 5) {
             for (int variant = 0; variant < count; ++variant) {
                 const auto label = juce::String(beats) + "/4 · " +
@@ -4162,7 +4238,6 @@ private:
         liveDuration.store(sequence->end, std::memory_order_relaxed);
         loopEnabled.store(false, std::memory_order_release);
         loopMode.setToggleState(false, juce::dontSendNotification);
-        loopMode.setButtonText(utf8("Loop em tempo real: desligado"));
         restart.store(true, std::memory_order_release);
         playing.store(true, std::memory_order_release);
         status.setText(utf8("Fórmula → notas: ") + juce::String(mapped.sequence.count) +
@@ -4219,7 +4294,9 @@ private:
             return;
         }
         std::string name = cellName.getText().trim().toStdString();
-        if (name.empty()) name = "Frase fórmula " + std::to_string(song.cellCount + 1);
+        if (name.empty())
+            name = uiText("Frase fórmula ", "Formula phrase ", "Phrase formule ",
+                          "Frase de fórmula ").toStdString() + std::to_string(song.cellCount + 1);
         const auto id = risco::storeFormulaEventCell(song, formulaInput.getText().toStdString(), name,
             captureFormulaWaveform(*formula, 0), mapped.sequence, scale, motion,
             tonicSemitones, bpm, {}, formulaProgressionChoice, formulaHarmonicBarsChoice, formulaSwingChoice, formulaSubdivisionChoice, formulaChordRootChoices, formulaSyncopationChoice, formulaPulsesChoice);
@@ -4244,10 +4321,14 @@ private:
         ensurePlacementVisible(selectedPlacement);
         startBeat.setText(juce::String(start + phraseBeats));
         refreshPlaybackAfterGridEdit();
-        status.setText(utf8("Frase guardada e inserida no STEM ") + juce::String(pendingStem + 1) +
-            utf8(" · grupo ") + juce::String::fromUTF8(
+        status.setText(uiText("Frase guardada e inserida no STEM ", "Phrase saved and placed on STEM ",
+                             "Phrase enregistrée et placée sur STEM ", "Frase guardada e insertada en STEM ")
+            + juce::String(pendingStem + 1)
+            + uiText(" · grupo ", " · group ", " · groupe ", " · grupo ") + juce::String::fromUTF8(
                 risco::formulaMetricGrouping(beatsPerBar, mapped.groupingVariant)) +
-            utf8(" · fórmula, escala e gesto preservados."), juce::dontSendNotification);
+            uiText(" · fórmula, escala e gesto preservados.", " · formula, scale and gesture kept.",
+                   " · formule, gamme et geste conservés.", " · fórmula, escala y gesto conservados."),
+            juce::dontSendNotification);
         repaint();
     }
 
@@ -4467,6 +4548,12 @@ private:
         return true;
     }
 
+    void refreshGenerateButtonLabel() {
+        generateFormulaButton.setButtonText(manualGlitchMode
+            ? uiText("Aplicar glitch", "Apply glitch", "Appliquer glitch", "Aplicar glitch")
+            : uiText("Gerar + tocar", "Generate + play", "Générer + jouer", "Generar + tocar"));
+    }
+
     void updateGlitchControls() {
         const bool glitchMode = seedSource.getSelectedId() >= 4;
         if (glitchMode && !manualGlitchMode) {
@@ -4479,13 +4566,12 @@ private:
         }
         manualGlitchMode = glitchMode;
         autoMode.setEnabled(!glitchMode);
+        refreshGenerateButtonLabel();
         if (glitchMode) {
-            generateFormulaButton.setButtonText(utf8("Aplicar glitch"));
             generateFormulaButton.setTooltip(utf8("Aplica o tipo selecionado à fórmula Bytebeat da célula escolhida. Intensidade de 1 a 100; cria e insere uma nova célula sem alterar o pai."));
             seedInput.setTooltip(utf8("Intensidade do glitch, de 1 a 100. Selecione antes a fórmula Bytebeat-pai no banco de células."));
             autoMode.setToggleState(false, juce::dontSendNotification);
         } else {
-            generateFormulaButton.setButtonText(utf8("Gerar + tocar"));
             generateFormulaButton.setTooltip(utf8("Cada fórmula gerada vai para o banco e para a grade; o repositório local de fórmulas persiste entre músicas."));
             seedInput.setTooltip(utf8("Um seed de origem. Texto/Desenho usam seus dados; Bytebeat e Frases derivam variações em contadores separados."));
         }
@@ -4584,14 +4670,14 @@ private:
         g.drawRoundedRectangle(panel.reduced(0.5f), 8.0f, 1.2f);
         g.setColour(juce::Colour(0xffcad2df));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(15.0f))));
-        drawCanvasText(g, textEntryMode ? utf8("ENTRADA ÚNICA · TEXTO")
-                                 : utf8("ENTRADA ÚNICA · DESENHO"),
+        drawCanvasText(g, textEntryMode ? uiText("ENTRADA ÚNICA · TEXTO", "INPUT · TEXT", "ENTRÉE · TEXTE", "ENTRADA · TEXTO")
+                                 : uiText("ENTRADA ÚNICA · DESENHO", "INPUT · DRAWING", "ENTRÉE · DESSIN", "ENTRADA · DIBUJO"),
                    96, 337, 420, 24, juce::Justification::left);
         g.setColour(juce::Colour(0xffa9b5c6));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(12.0f))));
         const auto entryHint = textEntryMode
-            ? utf8("UTF-8 · acentos e pontuação · clique em Desenhar para riscar")
-            : juce::String(inscription.count) + utf8(" / 12 traços · arraste para desenhar · clique em Digitar texto");
+            ? uiText("UTF-8 · acentos e pontuação · clique em Desenhar para riscar", "UTF-8 · accents and punctuation · choose Draw to switch modes", "UTF-8 · accents et ponctuation · choisir Dessiner", "UTF-8 · acentos y puntuación · elija Dibujar")
+            : juce::String(inscription.count) + uiText(" / 12 traços · arraste para desenhar · clique em Digitar texto", " / 12 strokes · drag to draw · choose Type text to switch modes", " / 12 traits · glisser pour dessiner · choisir Saisir texte", " / 12 trazos · arrastre para dibujar · elija Escribir texto");
         drawCanvasText(g, entryHint,
                    600, 339, 568, 20, juce::Justification::right);
         g.setColour(juce::Colour(0xff0c1728));
@@ -4607,7 +4693,7 @@ private:
         if (!textEntryMode && inscription.count == 0) {
             g.setColour(juce::Colour(0xff81929e));
             g.setFont(canvasFont(juce::Font(juce::FontOptions(13.0f))));
-            drawCanvasText(g, utf8("Comece um traço aqui — a leitura acompanha o gesto"),
+            drawCanvasText(g, uiText("Comece um traço aqui — a leitura acompanha o gesto", "Start a stroke here · playback follows the gesture", "Commencez un trait ici · la lecture suit le geste", "Empiece un trazo aquí · la lectura sigue el gesto"),
                        canvas.toNearestInt(), juce::Justification::centred);
         }
         const double scanDuration = std::max(0.18, liveDuration.load(std::memory_order_relaxed));
@@ -4668,11 +4754,11 @@ private:
         const int selected = selectedCellIndex();
         const auto* archivedCell = selected >= 0 ? &song.bank[static_cast<size_t>(selected)] : nullptr;
         const bool showArchived = archivedCell != nullptr && archivedCell->waveformCount > 0;
-        drawCanvasText(g, showArchived ? utf8("FORMA DA FUNÇÃO ARQUIVADA") :
+        drawCanvasText(g, showArchived ? uiText("FORMA DA FUNÇÃO ARQUIVADA", "STORED FORMULA WAVEFORM", "ONDE DE LA FORMULE ENREGISTRÉE", "ONDA DE LA FÓRMULA GUARDADA") :
                    (directEnabled.load(std::memory_order_relaxed) ?
                         (compiledFormulaExpression.rfind("f:", 0) == 0 ? utf8("FLOATBEAT DIRETO / 8 kHz") : utf8("BYTEBEAT DIRETO / 8 BITS")) :
-                        (song.bitDepth == 16 ? utf8("ONDA DE ÁUDIO / 16 BITS") :
-                                               utf8("ONDA DE ÁUDIO / 8 BITS"))),
+                        (song.bitDepth == 16 ? uiText("ONDA DE ÁUDIO / 16 BITS", "WAVEFORM / 16 BIT", "ONDE AUDIO / 16 BITS", "ONDA DE AUDIO / 16 BITS") :
+                                               uiText("ONDA DE ÁUDIO / 8 BITS", "WAVEFORM / 8 BIT", "ONDE AUDIO / 8 BITS", "ONDA DE AUDIO / 8 BITS"))),
                    32, 707, 360, 22, juce::Justification::left);
         std::array<float, 256> samples{};
         const auto published = publishedScopeWriteIndex.load(std::memory_order_acquire);
@@ -4695,8 +4781,11 @@ private:
         }
         const float zoom = peak > 0.001f ? std::clamp(0.88f / peak, 1.0f, 4.0f) : 1.0f;
         g.setFont(canvasFont(juce::Font(juce::FontOptions(10.0f))));
-        drawCanvasText(g, "ONDA " + juce::String(peak * 100.0f, 1) + "%  ZOOM x" + juce::String(zoom, 1) +
-            (showArchived ? "  ARQUIVO" : "  2048 AMOSTRAS"), 32, 826, logicalWidth - 64, 14,
+        drawCanvasText(g, uiText("ONDA ", "WAVE ", "ONDE ", "ONDA ") + juce::String(peak * 100.0f, 1)
+            + "%  ZOOM x" + juce::String(zoom, 1) + (showArchived
+                ? uiText("  ARQUIVO", "  STORED", "  ARCHIVE", "  ARCHIVO")
+                : uiText("  2048 AMOSTRAS", "  2048 SAMPLES", "  2048 ÉCHANTILLONS", "  2048 MUESTRAS")),
+            32, 826, logicalWidth - 64, 14,
             juce::Justification::right);
         g.setColour(juce::Colour(0xff171d24));
         g.fillRoundedRectangle(chart, 5.0f);
@@ -4735,7 +4824,7 @@ private:
             g.setColour(juce::Colour(reduction > 12.0f ? 0xffff786a :
                                      reduction > 3.0f ? 0xffffc65c : 0xff61e2f0));
             const auto lufs = [](float value, bool ready) { return !ready ? juce::String("--") : value <= -70 ? juce::String("<=-70") : juce::String(value,1); };
-            drawCanvasText(g, utf8("SAÍDA ") + juce::String(20.0f * std::log10(std::max(outputPeak,1e-6f)), 1) +
+            drawCanvasText(g, uiText("SAÍDA ", "OUTPUT ", "SORTIE ", "SALIDA ") + juce::String(20.0f * std::log10(std::max(outputPeak,1e-6f)), 1) +
                 " dBTP | RMS " + juce::String(20.0f * std::log10(std::max(1e-6f, outputRms.load(std::memory_order_acquire))), 1) +
                 " dBFS | LIMIT " + juce::String(reduction, 1) + " | LUFS M " + lufs(outputLufsM.load(),outputLufsMReady.load()) +
                 " S " + lufs(outputLufsS.load(),outputLufsSReady.load()) + " I " + lufs(outputLufsI.load(),outputLufsIReady.load()),
@@ -4761,17 +4850,21 @@ private:
         g.setColour(juce::Colour(0xffcad2df));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(15.0f))));
         juce::String activity = song.placementCount > 0
-            ? utf8("GRADE · mova, recorte ou toque as células")
+            ? uiText("GRADE · mova, recorte ou toque as células", "GRID · move, trim or play cells", "GRILLE · déplacer, couper ou jouer les cellules", "CUADRÍCULA · mueva, recorte o toque las células")
             : song.cellCount > 0
-                ? utf8("BANCO · selecione uma célula e insira na grade")
-                : utf8("GRADE VAZIA · use Faixa completa ou insira uma célula");
+                ? uiText("BANCO · selecione uma célula e insira na grade", "BANK · choose a cell and place it on the grid", "BANQUE · choisir une cellule et la placer dans la grille", "BANCO · elija una célula y colóquela en la cuadrícula")
+                : uiText("GRADE VAZIA · use Faixa completa ou insira uma célula", "EMPTY GRID · use Full track or place a cell", "GRILLE VIDE · choisir Morceau complet ou placer une cellule", "CUADRÍCULA VACÍA · use Pieza completa o inserte una célula");
         if (!playing.load(std::memory_order_acquire) && selectedPlacement >= 0 &&
             selectedPlacement < song.placementCount) {
             const auto* selected = risco::findCell(song, song.grid[static_cast<size_t>(selectedPlacement)].cellId);
             if (selected != nullptr)
-                activity = utf8("SELECIONADA · ") + juce::String::fromUTF8(selected->name.c_str()) +
+                activity = uiText("SELECIONADA · ", "SELECTED · ", "SÉLECTION · ", "SELECCIÓN · ")
+                    + juce::String::fromUTF8(selected->name.c_str()) +
                     utf8(" · STEM ") + juce::String(song.grid[static_cast<size_t>(selectedPlacement)].stem + 1) +
-                    utf8(" · Ouvir célula · bordas recortam · centro move · Retirar célula");
+                    uiText(" · Ouvir célula · bordas recortam · centro move · Retirar célula",
+                           " · Play cell · trim at edges · move at center · Remove cell",
+                           " · Écouter cellule · couper aux bords · déplacer au centre",
+                           " · Oír célula · recorte en bordes · mueva desde el centro");
         }
         std::array<bool, 128> activePlacements{};
         if (playing.load(std::memory_order_acquire) && !seedTrackPreview) {
@@ -4840,10 +4933,10 @@ private:
         }
         g.setColour(juce::Colour(0xff91a8b6));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(10.0f))));
-        drawCanvasText(g, utf8("RODA: NAVEGAR · CTRL+RODA: ZOOM · BORDAS: RECORTAR"),
+        drawCanvasText(g, uiText("RODA: NAVEGAR · CTRL+RODA: ZOOM · BORDAS: RECORTAR", "WHEEL: SCROLL · CTRL+WHEEL: ZOOM · EDGES: TRIM", "ROUE : DÉFILER · CTRL+ROUE : ZOOM · BORDS : COUPER", "RUEDA: DESPLAZAR · CTRL+RUEDA: ZOOM · BORDES: RECORTAR"),
                    logicalWidth - 500, 673, 468, 14,
                    juce::Justification::right);
-        drawCanvasText(g, utf8("CENTRO: MOVER · VERTICAL: STEM · SHIFT+ARRASTE: LOOP"), 32, 675, 410, 12,
+        drawCanvasText(g, uiText("CENTRO: MOVER · VERTICAL: STEM · SHIFT+ARRASTE: LOOP", "CENTER: MOVE · VERTICAL: STEM · SHIFT+DRAG: LOOP", "CENTRE : DÉPLACER · VERTICAL : STEM · MAJ+GLISSER : BOUCLE", "CENTRO: MOVER · VERTICAL: STEM · MAYÚS+ARRASTRE: BUCLE"), 32, 675, 410, 12,
                    juce::Justification::left);
         g.setColour(juce::Colour(0xff9fb2c2));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(9.0f, juce::Font::bold))));
@@ -4973,7 +5066,7 @@ private:
                 auto label = juce::String::fromUTF8(cell->name.data(), int(cell->name.size()));
                 if (w > 100.0f && (visibleSource > 0 || p.lengthBeats > 0 ||
                                     (i == draggedPlacement && placementDragMoved)))
-                    label += " · " + juce::String(visibleSource + 1) + "–" +
+                    label += utf8(" · ") + juce::String(visibleSource + 1) + utf8("–") +
                              juce::String(visibleSource + visibleLength);
                 drawCanvasText(g, label,
                            juce::roundToInt(x + 5.0f), juce::roundToInt(y),
@@ -5270,8 +5363,8 @@ private:
                     utf8("Até 64 caracteres. As fontes são referências; os projetos não são alterados."),
                     juce::MessageBoxIconType::NoIcon);
                 safeThis->libraryGroupNameDialog->addTextEditor("name","",utf8("Nome do agrupamento:"));
-                safeThis->libraryGroupNameDialog->addButton(utf8("Criar"),1,juce::KeyPress(juce::KeyPress::returnKey));
-                safeThis->libraryGroupNameDialog->addButton(utf8("Cancelar"),0,juce::KeyPress(juce::KeyPress::escapeKey));
+                safeThis->libraryGroupNameDialog->addButton(safeThis->uiText("Criar", "Create", "Créer", "Crear"),1,juce::KeyPress(juce::KeyPress::returnKey));
+                safeThis->libraryGroupNameDialog->addButton(safeThis->uiText("Cancelar", "Cancel", "Annuler", "Cancelar"),0,juce::KeyPress(juce::KeyPress::escapeKey));
                 safeThis->libraryGroupNameDialog->enterModalState(true,juce::ModalCallbackFunction::create(
                     [safeThis,selectedPaths](int choice) {
                         if (!safeThis || !safeThis->libraryGroupNameDialog) return;
@@ -5400,8 +5493,8 @@ private:
             juce::String(count) + utf8(" projeto(s) carregado(s). Nome, fórmula, autor, origem ou ID; até 128 resultados."),
             juce::MessageBoxIconType::NoIcon);
         libraryDialog->addTextEditor("query","",utf8("Busca:"));
-        libraryDialog->addButton(utf8("Buscar"),1,juce::KeyPress(juce::KeyPress::returnKey));
-        libraryDialog->addButton(utf8("Cancelar"),0,juce::KeyPress(juce::KeyPress::escapeKey));
+        libraryDialog->addButton(uiText("Buscar", "Search", "Rechercher", "Buscar"),1,juce::KeyPress(juce::KeyPress::returnKey));
+        libraryDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"),0,juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         const auto allowedSources = group.sources;
         const auto groupName = group.name;
@@ -5887,9 +5980,9 @@ private:
         lockProfiles.add(utf8("Travar todas as famílias"));
         compositionSeedDialog->addComboBox("locks", lockProfiles, utf8("Perfil de travas:"));
         compositionSeedDialog->getComboBoxComponent("locks")->setSelectedId(1, juce::dontSendNotification);
-        compositionSeedDialog->addButton(utf8("Revisar proposta"), 1,
+        compositionSeedDialog->addButton(uiText("Revisar proposta", "Review proposal", "Vérifier la proposition", "Revisar propuesta"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        compositionSeedDialog->addButton(utf8("Cancelar"), 0,
+        compositionSeedDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         compositionSeedDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -5965,9 +6058,9 @@ private:
             utf8("Parentesco · paletas recorrentes"),
             utf8("Contraste · alterna formas, ritmos e timbres")}, utf8("Percurso musical:"));
         albumDialog->getComboBoxComponent("profile")->setSelectedId(3, juce::dontSendNotification);
-        albumDialog->addButton(utf8("Revisar plano"), 1,
+        albumDialog->addButton(uiText("Revisar plano", "Review plan", "Vérifier le plan", "Revisar plan"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        albumDialog->addButton(utf8("Cancelar"), 0,
+        albumDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         albumDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -6044,9 +6137,9 @@ private:
             juce::String(minutes, 1) + utf8(" min\n\n") + summaries.joinIntoString("\n") +
             utf8("\n\nEsta etapa cria os projetos .risco. Em Álbum, use Renderizar WAVs para exportar o áudio."),
             juce::MessageBoxIconType::QuestionIcon);
-        albumReviewDialog->addButton(utf8("Escolher pasta e gerar"), 1,
+        albumReviewDialog->addButton(uiText("Escolher pasta e gerar", "Choose folder and generate", "Choisir un dossier et générer", "Elegir carpeta y generar"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        albumReviewDialog->addButton(utf8("Cancelar"), 0,
+        albumReviewDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         albumReviewDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -6201,9 +6294,9 @@ private:
         seedTrackDialog->getComboBoxComponent("form")->setSelectedId(1, juce::dontSendNotification);
         seedTrackDialog->addComboBox("surprise", {utf8("Contida"), utf8("Média"), utf8("Alta")}, utf8("Surpresa:"));
         seedTrackDialog->getComboBoxComponent("surprise")->setSelectedId(2, juce::dontSendNotification);
-        seedTrackDialog->addButton(utf8("Gerar proposta"), 1,
+        seedTrackDialog->addButton(uiText("Gerar proposta", "Generate proposal", "Générer une proposition", "Generar propuesta"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        seedTrackDialog->addButton(utf8("Cancelar"), 0,
+        seedTrackDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         seedTrackDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -6247,7 +6340,7 @@ private:
             utf8("Células: 48 · 16 por stem · melodia, harmonia e baixo\n") +
             utf8("Ouça a proposta antes de salvar. Ao salvar, a faixa abre e toca uma vez."),
             juce::MessageBoxIconType::QuestionIcon, this);
-        seedTrackReviewDialog->addButton(utf8("Ouvir prévia"), 0);
+        seedTrackReviewDialog->addButton(uiText("Ouvir prévia", "Play preview", "Écouter l’aperçu", "Oír vista previa"), 0);
         seedTrackReviewDialog->getButton(0)->onClick = [this, candidate] {
             if (seedTrackPreviewPlaying.load(std::memory_order_relaxed)) {
                 const juce::ScopedLock lock(deviceManager.getAudioCallbackLock());
@@ -6275,9 +6368,9 @@ private:
                 seedTrackPreviewPlaying.store(true, std::memory_order_relaxed);
             }
         };
-        seedTrackReviewDialog->addButton(utf8("Salvar e tocar uma vez…"), 1,
+        seedTrackReviewDialog->addButton(uiText("Salvar e tocar uma vez…", "Save and play once…", "Sauver et jouer une fois…", "Guardar y tocar una vez…"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        seedTrackReviewDialog->addButton(utf8("Cancelar"), 0,
+        seedTrackReviewDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         seedTrackReviewDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -6359,9 +6452,9 @@ private:
                      juce::String(changedFx) + " FX · " + juce::String(changedStemMix) + utf8(" mixagens"));
         compositionSeedPreviewDialog = std::make_unique<juce::AlertWindow>(
             utf8("Revisar proposta generativa"), summary, juce::MessageBoxIconType::QuestionIcon);
-        compositionSeedPreviewDialog->addButton(utf8("Aplicar variação"), 1,
+        compositionSeedPreviewDialog->addButton(uiText("Aplicar variação", "Apply variation", "Appliquer la variation", "Aplicar variación"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
-        compositionSeedPreviewDialog->addButton(utf8("Cancelar"), 0,
+        compositionSeedPreviewDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         compositionSeedPreviewDialog->enterModalState(true, juce::ModalCallbackFunction::create(
@@ -6951,7 +7044,6 @@ private:
         autoPhraseButton.setToggleState(false, juce::dontSendNotification);
         loopEnabled.store(false, std::memory_order_release);
         loopMode.setToggleState(false, juce::dontSendNotification);
-        loopMode.setButtonText("Loop: OFF");
         active.store(nullptr, std::memory_order_release);
         activeSong.store(nullptr, std::memory_order_release);
         activeFormula.store(nullptr, std::memory_order_release);
@@ -7265,18 +7357,24 @@ private:
         }
         return source;
     }
+    void refreshInputButtonLabel() {
+        ledSourceButton.setButtonText(textEntryMode
+            ? uiText("Desenhar", "Draw", "Dessiner", "Dibujar")
+            : uiText("Digitar texto", "Type text", "Saisir texte", "Escribir texto"));
+    }
+
     void setTextEntryMode(bool enabled, bool focus, bool updateSound = true) {
         textEntryMode = enabled;
         marqueeScrollStartMillis = juce::Time::getMillisecondCounter();
         ascii.setVisible(enabled);
         ledShowsDrawing = !enabled;
-        ledSourceButton.setButtonText(enabled ? utf8("Desenhar") : utf8("Digitar texto"));
+        refreshInputButtonLabel();
         ledSourceButton.setTooltip(enabled
             ? utf8("Volta ao desenho neste mesmo quadro; o texto continua guardado.")
             : utf8("Abre o texto neste quadro; o desenho continua guardado."));
         status.setText(enabled
-            ? utf8("Digite no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar.")
-            : utf8("Desenhe até 12 traços no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar."),
+            ? uiText("Digite no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar.", "Type in the input area. Use Play text/drawing to listen.", "Saisissez du texte dans la zone d’entrée. Choisissez Écouter texte/dessin.", "Escriba en el área de entrada. Use Oír texto/dibujo para escuchar.")
+            : uiText("Desenhe até 12 traços no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar.", "Draw up to 12 strokes. Use Play text/drawing to hear them.", "Dessinez jusqu’à 12 traits. Choisissez Écouter texte/dessin pour les entendre.", "Dibuje hasta 12 trazos. Use Oír texto/dibujo para escucharlos."),
             juce::dontSendNotification);
         if (focus) {
             if (enabled) ascii.grabKeyboardFocus();
@@ -7398,7 +7496,8 @@ private:
         if (seedTrackReviewDialog) {
             auto* button = seedTrackReviewDialog->getButton(0);
             const auto label = seedTrackPreviewPlaying.load(std::memory_order_relaxed)
-                ? utf8("Parar prévia") : utf8("Ouvir prévia");
+                ? uiText("Parar prévia", "Stop preview", "Arrêter l’aperçu", "Detener vista previa")
+                : uiText("Ouvir prévia", "Play preview", "Écouter l’aperçu", "Oír vista previa");
             if (button->getButtonText() != label) button->setButtonText(label);
         }
         if (!seedTrackPreview && playing.load(std::memory_order_acquire) && !previewingCell &&
@@ -7444,18 +7543,31 @@ private:
     }
 
     void showActivity(const juce::String& message) {
-        activityStatus.setText(utf8("Atividade · ") + message, juce::dontSendNotification);
+        activityMessage = message;
+        refreshActivityLabel();
+    }
+
+    void refreshActivityLabel() {
+        const auto idle = uiText("Aguardando tarefa", "Waiting for a task", "En attente d’une tâche", "Esperando tarea");
+        activityStatus.setText(uiText("Atividade · ", "Activity · ", "Activité · ", "Actividad · ")
+            + (activityMessage.isEmpty() ? idle : activityMessage), juce::dontSendNotification);
     }
 
     void refreshGenerationStatus() {
         const auto phrases = autoPhraseButton.getToggleState() ? "auto" : "manual";
-        const auto formula = !autoMode.getToggleState() ? "manual"
-            : directEnabled.load(std::memory_order_relaxed) ? "auto" : "em espera";
-        const char* levels[] = {"manual", "assistida", "conjunto", "ampla"};
+        const auto formula = !autoMode.getToggleState() ? juce::String("manual")
+            : directEnabled.load(std::memory_order_relaxed) ? juce::String("auto")
+                : uiText("em espera", "waiting", "en attente", "en espera");
+        const juce::String levels[] = {"manual",
+            uiText("assistida", "assisted", "assistée", "asistida"),
+            uiText("conjunto", "combined", "combinée", "combinada"),
+            uiText("ampla", "broad", "large", "amplia")};
         const int level = song.compositionSeedRecipeEnabled
             ? std::clamp(int(song.compositionSeedLevel), 0, 3) : 0;
-        generationStatus.setText(utf8("Frases: ") + phrases + utf8(" · Fórmula: ") + formula +
-                                 utf8(" · Receita: ") + levels[level], juce::dontSendNotification);
+        generationStatus.setText(uiText("Frases: ", "Phrases: ", "Phrases : ", "Frases: ") + phrases
+            + uiText(" · Fórmula: ", " · Formula: ", " · Formule : ", " · Fórmula: ") + formula
+            + uiText(" · Receita: ", " · Recipe: ", " · Recette : ", " · Receta: ") + levels[level],
+            juce::dontSendNotification);
     }
 
     void refreshAutomationEditor() {
@@ -7654,20 +7766,31 @@ private:
         previewCellButton.setToggleState(hearsCell, juce::dontSendNotification);
         play.setToggleState(hearsInput, juce::dontSendNotification);
         setToggleLabel(playSongButton, hearsGrid && !hearsCell,
-                       utf8("Música ativa"), utf8("Tocar música"));
-        setToggleLabel(previewCellButton, hearsCell, utf8("Ouvindo célula"), utf8("Ouvir célula"));
-        setToggleLabel(play, hearsInput, utf8("Ouvindo texto/desenho"), utf8("Ouvir texto/desenho"));
+            uiText("Música ativa", "Song playing", "Morceau en cours", "Pieza activa"),
+            uiText("Tocar música", "Play song", "Jouer morceau", "Tocar pieza"));
+        setToggleLabel(previewCellButton, hearsCell,
+            uiText("Ouvindo célula", "Cell playing", "Cellule en cours", "Célula activa"),
+            uiText("Ouvir célula", "Play cell", "Écouter cellule", "Oír célula"));
+        setToggleLabel(play, hearsInput,
+            uiText("Ouvindo texto/desenho", "Input playing", "Entrée en cours", "Entrada activa"),
+            uiText("Ouvir texto/desenho", "Play text/drawing", "Écouter texte/dessin", "Oír texto/dibujo"));
         setToggleLabel(functionMode, functionMode.getToggleState(),
-                       utf8("Função 8b: ON"), utf8("Função 8b: OFF"));
+            uiText("Função 8b: ON", "8-bit fn: ON", "Fonct. 8b : ON", "Func. 8b: ON"),
+            uiText("Função 8b: OFF", "8-bit fn: OFF", "Fonct. 8b : OFF", "Func. 8b: OFF"));
         setToggleLabel(loopMode, loopMode.getToggleState(), utf8("Loop: ON"), utf8("Loop: OFF"));
-        setToggleLabel(autoMode, autoMode.getToggleState(), utf8("Fórmula auto: ON"), utf8("Fórmula auto"));
+        setToggleLabel(autoMode, autoMode.getToggleState(),
+            uiText("Fórmula auto: ON", "Auto formula: ON", "Formule auto : ON", "Fórmula auto: ON"),
+            uiText("Fórmula auto", "Auto formula", "Formule auto", "Fórmula auto"));
         setToggleLabel(directMode, directMode.getToggleState(),
-                       utf8("Fórmula dir.: ON"), utf8("Fórmula dir.: OFF"));
+            uiText("Fórmula dir.: ON", "Direct formula: ON", "Formule dir. : ON", "Fórmula dir.: ON"),
+            uiText("Fórmula dir.: OFF", "Play formula", "Écouter formule", "Oír fórmula"));
         setToggleLabel(recButton, recButton.getToggleState(), utf8("REC ON"), utf8("REC OFF"));
         setToggleLabel(autoPhraseButton, autoPhraseButton.getToggleState(),
-                       utf8("Frases: ON"), utf8("Frases auto"));
+            uiText("Frases: ON", "Phrases: ON", "Phrases : ON", "Frases: ON"),
+            uiText("Frases auto", "Auto phrases", "Phrases auto", "Frases auto"));
         setToggleLabel(loopRangeButton, loopRangeButton.getToggleState(),
-                       utf8("Trecho: ON"), utf8("Trecho: OFF"));
+            uiText("Trecho: ON", "Range: ON", "Plage : ON", "Tramo: ON"),
+            uiText("Trecho: OFF", "Range: OFF", "Plage : OFF", "Tramo: OFF"));
     }
 
     static std::string normalizeFormulaText(std::string value) {
@@ -7697,15 +7820,17 @@ private:
         if (current.empty()) {
             label = utf8("EDITOR · VAZIO");
         } else if (placements > 0) {
-            label = utf8("NA GRADE ×") + juce::String(placements);
+            label = uiText("NA GRADE ×", "ON GRID ×", "DANS LA GRILLE ×", "EN CUADRÍCULA ×")
+                + juce::String(placements);
             colour = juce::Colour(0xff16776c);
         } else if (inBank) {
-            label = utf8("NO BANCO · INSERIR NA GRADE");
+            label = uiText("NO BANCO · INSERIR NA GRADE", "IN BANK · PLACE ON GRID",
+                           "EN BANQUE · PLACER EN GRILLE", "EN BANCO · INSERTAR EN CUADRÍCULA");
             colour = juce::Colour(0xff496bb8);
         } else if (normalizeFormulaText(compiledFormulaExpression) == current) {
             label = recButton.getToggleState()
-                ? utf8("COMPILADA · REC ON: RECOMPILAR")
-                : utf8("COMPILADA · ATIVE REC E RECOMPILAR");
+                ? uiText("COMPILADA · REC ON: RECOMPILAR", "COMPILED · REC ON: RECOMPILE", "COMPILÉE · REC ON : RECOMPILER", "COMPILADA · REC ON: RECOMPILAR")
+                : uiText("COMPILADA · ATIVE REC E RECOMPILAR", "COMPILED · ENABLE REC AND RECOMPILE", "COMPILÉE · ACTIVER REC ET RECOMPILER", "COMPILADA · ACTIVE REC Y RECOMPILE");
             colour = juce::Colour(0xff7656bd);
         } else {
             label = utf8("SÓ NO EDITOR · COMPILAR");
@@ -7722,7 +7847,7 @@ private:
                         ? utf8("TOCANDO PRÉVIA DA FAIXA · seed ") + juce::String(seedTrackPreview->song->compositionSeed)
                         : utf8("PRÉVIA DA FAIXA · parada"), juce::Colour(0xff56b8cf)};
         if (!playing.load(std::memory_order_acquire))
-            return {utf8("PARADO · nenhuma fonte está tocando"), juce::Colour(0xff697583)};
+            return {uiText("PARADO · nenhuma fonte está tocando", "STOPPED · no source playing", "ARRÊT · aucune source en cours", "PARADO · ninguna fuente activa"), juce::Colour(0xff697583)};
 
         if (directEnabled.load(std::memory_order_acquire)) {
             return {utf8(compiledFormulaExpression.rfind("f:", 0) == 0 ? "TOCANDO · FLOATBEAT DIRETO · " : "TOCANDO · FÓRMULA BYTEBEAT DIRETA · ") +
@@ -7907,6 +8032,7 @@ private:
     HelpOverlay helpOverlay;
     juce::Slider shapeDriveSlider;
     juce::Label status, activityStatus, generationStatus;
+    juce::String activityMessage;
     std::string compiledFormulaExpression;
     juce::Label masterLabel, bpmLabel, shapeDriveLabel;
     juce::Slider masterSlider, bpmSlider;
