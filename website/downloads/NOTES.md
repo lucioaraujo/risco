@@ -1,6 +1,12 @@
-# Risco 0.1.0 — builds de avaliação
+# Risco — arquivos históricos de avaliação
+
+Esta pasta preserva arquivos antigos da avaliação inicial. Para baixar a
+versão estável atual, use a [release Risco 0.1.0 no GitHub](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0).
 
 ## Português
+
+Estes arquivos são históricos e não correspondem ao release estável atual.
+Use a [versão estável Risco 0.1.0](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0).
 
 Os arquivos desta versão foram compilados para Linux x86_64, Windows x86_64 e
 macOS arm64. Os 12 testes automatizados passaram em cada plataforma na
@@ -18,6 +24,9 @@ No Windows, se o sistema informar que falta uma DLL do runtime MSVC, instale o
 
 ## English
 
+These are historical evaluation archives and do not match the current stable
+release. Get [stable Risco 0.1.0](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0).
+
 These archives were built for Linux x86_64, Windows x86_64 and macOS arm64.
 All 12 automated tests passed on each platform in
 [GitHub Actions run 45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
@@ -33,6 +42,9 @@ On Windows, if the system reports a missing MSVC runtime DLL, install the
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
 
 ## Français
+
+Ces archives d’évaluation sont historiques et ne correspondent pas à la
+version stable actuelle. Téléchargez [Risco 0.1.0 stable](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0).
 
 Ces archives ont été compilées pour Linux x86_64, Windows x86_64 et macOS
 arm64. Les 12 tests automatisés ont réussi sur chaque plateforme dans
@@ -51,6 +63,9 @@ Sous Windows, si le système signale une DLL d’exécution MSVC manquante,
 installez le [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
 
 ## Español
+
+Estos archivos de evaluación son históricos y no corresponden a la versión
+estable actual. Descargue [Risco 0.1.0 estable](https://github.com/lucioaraujo/risco/releases/tag/v0.1.0).
 
 Estos archivos se compilaron para Linux x86_64, Windows x86_64 y macOS arm64.
 Las 12 pruebas automatizadas pasaron en cada plataforma en la
