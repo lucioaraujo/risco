@@ -1,5 +1,15 @@
 # Risco 0.1.0
 
+Stable release. The GitHub Actions matrix compiled Linux, Windows x64 and
+macOS arm64 and passed 12/12 automated tests per platform in run
+[45734641224](https://github.com/lucioaraujo/risco/actions/runs/45734641224).
+The Linux `.deb`, AppImage and user-local `.tar.gz` opened on Debian 12,
+Ubuntu 24.04, Fedora and Arch in the same run. Windows and macOS passed their
+automated builds and tests; their ZIPs have not been manually opened on
+personal devices. The macOS app is Apple Silicon only, unsigned and not
+notarized. Some advanced menus and messages remain in Portuguese; audio,
+devices and interface behavior should be evaluated on personal computers.
+
 ## Português
 
 Risco é um instrumento de composição generativa de Lúcio de Araújo, da família

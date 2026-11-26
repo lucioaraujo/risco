@@ -3,7 +3,7 @@ name: Risco Linux packages and launch matrix
 on:
   workflow_dispatch:
   push:
-    tags: ['v0.1.0-rc*']
+    tags: ['v0.1.0-rc*', 'v0.1.0']
 
 permissions:
   contents: read
@@ -174,13 +174,13 @@ jobs:
           '
 
   native:
-    if: startsWith(github.ref, 'refs/tags/v0.1.0-rc')
+    if: github.ref == 'refs/tags/v0.1.0' || startsWith(github.ref, 'refs/tags/v0.1.0-rc')
     uses: ./.github/workflows/build-matrix.yml
     with:
       platform: windows-macos
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v0.1.0-rc')
+    if: github.ref == 'refs/tags/v0.1.0' || startsWith(github.ref, 'refs/tags/v0.1.0-rc')
     needs: [package, launch, native]
     runs-on: ubuntu-22.04
     permissions:
@@ -206,13 +206,22 @@ jobs:
           sha256sum -c SHA256SUMS
           unzip -t risco-0.1.0-windows-x64.zip
           unzip -t risco-0.1.0-macos-arm64.zip
-      - name: Create the evaluation release
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          release_args=()
+          if [[ "$GITHUB_REF_NAME" == *-rc* ]]; then
+            release_args+=(--prerelease)
+            release_title="Risco 0.1.0 — evaluation candidate"
+            release_notes=packaging/evaluation/NOTES.md
+          else
+            release_title="Risco 0.1.0"
+            release_notes=packaging/NOTAS_DE_VERSAO.md
+          fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --title "Risco 0.1.0 — evaluation candidate" --prerelease --verify-tag \
-            --notes-file packaging/evaluation/NOTES.md \
+            --title "$release_title" "${release_args[@]}" --verify-tag \
+            --notes-file "$release_notes" \
             release/risco-0.1.0-linux-x86_64.deb \
             release/risco-0.1.0-linux-x86_64.AppImage \
             release/risco-0.1.0-linux-x86_64.tar.gz \

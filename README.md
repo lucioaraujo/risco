@@ -35,15 +35,19 @@ project is in `examples/primeira_musica.risco`. Imported formulas retain their
 provenance and rights status. A formula library may contain third-party or
 user-created work and is not included here.
 
-Evaluation builds are available for Linux x86_64, Windows x86_64 and macOS
-arm64 on the [Risco evaluation website](https://lucioaraujo.github.io/risco/#versoes).
+Version 0.1.0 is available for Linux x86_64, Windows x86_64 and macOS arm64
+on the [Risco website](https://lucioaraujo.github.io/risco/#versoes) and
+[GitHub Releases](https://github.com/lucioaraujo/risco/releases/latest).
 The full GitHub Actions matrix compiled all three targets and passed 12/12
 automated tests per platform in run
-[45705536064](https://github.com/lucioaraujo/risco/actions/runs/45705536064).
-The builds have not been manually checked on personal devices for startup,
-audio hardware, fonts or interface behavior; the archives are not installers.
-See the evaluation notes for platform limits and dependencies. The historical
-AY/YM engine documents its fidelity limits in
+[45734641224](https://github.com/lucioaraujo/risco/actions/runs/45734641224).
+The Linux `.deb`, AppImage and user-local `.tar.gz` opened on Debian 12,
+Ubuntu 24.04, Fedora and Arch in that run. Windows and macOS builds passed
+CI but have not been manually opened on personal devices. The Windows and
+macOS archives are portable ZIPs, not installers; macOS is Apple Silicon only,
+unsigned and not notarized. Audio hardware and interface behavior still need
+evaluation on personal computers; some advanced menus and messages remain in
+Portuguese. The historical AY/YM engine documents its fidelity limits in
 [the AY/YM research notes](PESQUISA_NUCLEO_AY_FIEL.md). Additional research
 and design documents are included in this repository.
 
