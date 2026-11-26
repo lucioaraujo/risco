@@ -1,5 +1,7 @@
 # Risco
 
+<p align="center"><img src="resources/RiscoPixelLogo.svg" width="212" alt="Risco"></p>
+
 Risco is a musical instrument for composing with text, drawings, formulas and
 generative forms. It combines a live Bytebeat and Floatbeat player, an editable
 arrangement, three independent stems, historical AY/YM synthesis, effects,
