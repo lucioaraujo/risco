@@ -11,9 +11,12 @@ instalação em `~/.local`; Windows e macOS vêm em arquivos ZIP portáteis. O
 macOS é apenas Apple Silicon e não está assinado/notarizado.
 
 Veja `SHA256SUMS` e `README.md` dentro de cada arquivo. Os pacotes Linux são
-compilados do código na tag de pré-release que acompanha esta nota; os ZIPs de
-Windows e macOS vêm da tag `v0.1.0-evaluation`. Licenças e proveniência estão
-nos arquivos `NOTICE.md`, `LICENSE` e `CREDITOS_E_LICENCAS.md`.
+compilados do código na tag de pré-release que acompanha esta nota; a abertura
+dos três formatos foi verificada em Debian 12, Ubuntu 24.04, Fedora 45 e Arch
+na [matriz Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
+Os ZIPs de Windows e macOS vêm da tag `v0.1.0-evaluation`. Licenças e
+proveniência estão nos arquivos `NOTICE.md`, `LICENSE` e
+`CREDITOS_E_LICENCAS.md`.
 
 No Windows, se o sistema informar que falta uma DLL do runtime MSVC, instale o
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
@@ -29,9 +32,12 @@ AppImage and a user-local-installable `.tar.gz`; Windows and macOS are portable
 ZIP archives. The macOS build is Apple Silicon only, unsigned and not notarized.
 
 See `SHA256SUMS` and the `README.md` inside each archive. Linux packages are
-built from the source at the accompanying pre-release tag; the Windows and
-macOS ZIPs come from tag `v0.1.0-evaluation`. License and provenance
-information is in `NOTICE.md`, `LICENSE` and `CREDITOS_E_LICENCAS.md`.
+built from the source at the accompanying pre-release tag; startup of all
+three formats was checked in Debian 12, Ubuntu 24.04, Fedora 45 and Arch in
+[Linux matrix 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
+The Windows and macOS ZIPs come from tag `v0.1.0-evaluation`. License and
+provenance information is in `NOTICE.md`, `LICENSE` and
+`CREDITOS_E_LICENCAS.md`.
 
 On Windows, if the system reports a missing MSVC runtime DLL, install the
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
@@ -48,9 +54,12 @@ fournis en archives ZIP portables. macOS est limité à Apple Silicon et n’est
 signé ni notarié.
 
 Voir `SHA256SUMS` et le `README.md` de chaque archive. Les paquets Linux sont
-construits depuis le code de la pré-version jointe ; les ZIP Windows et macOS
-proviennent du tag `v0.1.0-evaluation`. Les licences et la provenance sont
-décrites dans `NOTICE.md`, `LICENSE` et `CREDITOS_E_LICENCAS.md`.
+construits depuis le code de la pré-version jointe ; le démarrage des trois
+formats a été vérifié sur Debian 12, Ubuntu 24.04, Fedora 45 et Arch dans la
+[matrice Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
+Les ZIP Windows et macOS proviennent du tag `v0.1.0-evaluation`. Les licences
+et la provenance sont décrites dans `NOTICE.md`, `LICENSE` et
+`CREDITOS_E_LICENCAS.md`.
 
 Sous Windows, si le système signale une DLL d’exécution MSVC manquante,
 installez le [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
@@ -66,9 +75,12 @@ instalable en `~/.local`; Windows y macOS se distribuyen como archivos ZIP
 portátiles. macOS es solo para Apple Silicon y no está firmado ni notarizado.
 
 Consulte `SHA256SUMS` y el `README.md` de cada archivo. Los paquetes Linux se
-compilan desde el código de la versión preliminar adjunta; los ZIP de Windows
-y macOS proceden de la etiqueta `v0.1.0-evaluation`. Las licencias y la
-procedencia se explican en `NOTICE.md`, `LICENSE` y `CREDITOS_E_LICENCAS.md`.
+compilan desde el código de la versión preliminar adjunta; el inicio de los
+tres formatos se comprobó en Debian 12, Ubuntu 24.04, Fedora 45 y Arch en la
+[matriz Linux 45726819626](https://github.com/lucioaraujo/risco/actions/runs/45726819626).
+Los ZIP de Windows y macOS proceden de la etiqueta `v0.1.0-evaluation`. Las
+licencias y la procedencia se explican en `NOTICE.md`, `LICENSE` y
+`CREDITOS_E_LICENCAS.md`.
 
 En Windows, si el sistema indica que falta una DLL del runtime MSVC, instale el
 [Microsoft Visual C++ v14 Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe).
