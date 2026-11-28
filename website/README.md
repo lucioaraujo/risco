@@ -2,7 +2,7 @@
 
 Static release website in Portuguese, English, French and Spanish. It has an
 instrument introduction, a first-composition tutorial, stable release
-downloads, step-by-step installation pages, authorship and license links.
+downloads, step-by-step installation pages, authorship and license links.\nThe four homepages describe the current main branch's five channels and generative\ntrack/album workflow, while distinguishing those features from the stable 0.1.0 downloads.
 Each language page links to the Linux `.deb`, AppImage and user-local
 `.tar.gz`, plus the Windows and macOS ZIP archives of `v0.1.0`.
 
