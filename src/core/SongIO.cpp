@@ -96,8 +96,8 @@ bool saveSong(std::ostream& out, const Song& song,
         for (const auto& name : versionNames)
             if (name == version.name) return false;
         std::istringstream snapshotStream(version.serializedSong);
-        Song snapshot;
-        if (!loadSongImpl(snapshotStream,snapshot,nullptr,nullptr,false)) return false;
+        auto snapshot = std::make_unique<Song>();
+        if (!loadSongImpl(snapshotStream,*snapshot,nullptr,nullptr,false)) return false;
         versionNames.push_back(version.name);
         versionBytes += version.serializedSong.size();
     }
@@ -221,7 +221,19 @@ bool saveSong(std::ostream& out, const Song& song,
             (placement.span != CellSpan::beat && placement.span != CellSpan::bar &&
              placement.span != CellSpan::fourBars && placement.span != CellSpan::twoBars)) return false;
     }
-    const bool version76 = song.compositionSeedRecipeEnabled;
+    const bool hasStrokePressure = std::any_of(song.bank.begin(), song.bank.begin() + song.cellCount,
+        [](const Cell& cell) {
+            for (int s = 0; s < cell.inscription.count; ++s)
+                for (int p = 0; p < cell.inscription.strokes[static_cast<size_t>(s)].count; ++p)
+                    if (cell.inscription.strokes[static_cast<size_t>(s)].points[static_cast<size_t>(p)].pressure >= 0.0f)
+                        return true;
+            return false;
+        });
+    const bool version77 = hasStrokePressure || std::any_of(versions.begin(), versions.end(),
+        [](const NamedSongVersionRecord& version) {
+            return version.serializedSong.rfind("RISCO_SONG_V77\n", 0) == 0;
+        });
+    const bool version76 = version77 || song.compositionSeedRecipeEnabled;
     const bool version75 = version76 || !versions.empty();
     const bool version74 = version75 || std::any_of(song.bank.begin(),song.bank.begin() + song.cellCount,[](const Cell& cell) {
         return cell.inputInterpretation > 12;
@@ -234,7 +246,7 @@ bool saveSong(std::ostream& out, const Song& song,
         return version.serializedSong.rfind("RISCO_SONG_V73\n",0) == 0;
     });
     if (song.preferredTakeId != 0 && !findCell(song,song.preferredTakeId)) return false;
-    out << (version76 ? "RISCO_SONG_V76\n" : version75 ? "RISCO_SONG_V75\n" : version74 ? "RISCO_SONG_V74\n" : version73 ? "RISCO_SONG_V73\n" : "RISCO_SONG_V71\n")
+    out << (version77 ? "RISCO_SONG_V77\n" : version76 ? "RISCO_SONG_V76\n" : version75 ? "RISCO_SONG_V75\n" : version74 ? "RISCO_SONG_V74\n" : version73 ? "RISCO_SONG_V73\n" : "RISCO_SONG_V71\n")
         << std::setprecision(9)
         << song.bpm << ' ' << song.beatsPerBar << ' ' << song.bitDepth << ' '
         << song.timbreMode << ' ' << song.shapeMode << ' ' << song.shapeDrive << ' '
@@ -251,35 +263,41 @@ bool saveSong(std::ostream& out, const Song& song,
             << song.compositionSeed << ' ' << unsigned(song.compositionSeedLevel) << ' '
             << song.compositionSeedLocks << '\n';
     out << "DELAY";
-    for (int s = 0; s < Song::stemCount; ++s)
+    for (int s = 0; s < 3; ++s)
         out << ' ' << song.stemDelayMix[static_cast<size_t>(s)] << ' ' << song.stemDelayFeedback[static_cast<size_t>(s)];
     out << '\n';
     out << "FILTER " << song.stemFilterCutoff[0] << ' ' << song.stemFilterCutoff[1] << ' ' << song.stemFilterCutoff[2] << '\n';
     out << "BITCRUSH " << song.stemBitcrushBits[0] << ' ' << song.stemBitcrushBits[1] << ' ' << song.stemBitcrushBits[2] << '\n';
     out << "BITCRUSH_PARAMS";
-    for (const auto& curve : song.stemBitcrushAutomation)
+    for (int s = 0; s < 3; ++s) {
+        const auto& curve = song.stemBitcrushAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.values[0] << ' ' << curve.values[1] << ' ' << curve.values[2];
+    }
     out << '\n';
     out << "REVERB " << song.stemReverbMix[0] << ' ' << song.stemReverbMix[1] << ' ' << song.stemReverbMix[2]
         << ' ' << song.stemReverbDecay[0] << ' ' << song.stemReverbDecay[1] << ' ' << song.stemReverbDecay[2] << '\n';
     out << "AUTOMATION";
-    for (const auto& curve : song.stemAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.levels[0] << ' ' << curve.levels[1] << ' ' << curve.levels[2];
+    }
     out << '\n';
     out << "PAN_AUTOMATION";
-    for (const auto& curve : song.stemPanAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemPanAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.levels[0] << ' ' << curve.levels[1] << ' ' << curve.levels[2];
+    }
     out << '\n';
     out << "FX_AUTOMATION";
-    for (const auto& curve : song.stemFxAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemFxAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << int(curve.active[0]) << ' ' << int(curve.active[1]) << ' ' << int(curve.active[2]);
+    }
     out << '\n';
     out << "FX_PARAMS";
-    for (const auto& curve : song.stemFilterAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemFilterAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.values[0] << ' ' << curve.values[1] << ' ' << curve.values[2];
+    }
     out << '\n';
     out << "DELAY_PARAMS";
-    for (int s = 0; s < Song::stemCount; ++s) {
+    for (int s = 0; s < 3; ++s) {
         const auto& mix = song.stemDelayMixAutomation[static_cast<size_t>(s)];
         const auto& feedback = song.stemDelayFeedbackAutomation[static_cast<size_t>(s)];
         out << ' ' << int(mix.enabled) << ' ' << mix.values[0] << ' ' << mix.values[1] << ' ' << mix.values[2]
@@ -287,18 +305,20 @@ bool saveSong(std::ostream& out, const Song& song,
     }
     out << '\n';
     out << "REVERB_PARAMS";
-    for (const auto& curve : song.stemReverbMixAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemReverbMixAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.values[0] << ' ' << curve.values[1] << ' ' << curve.values[2];
+    }
     out << '\n';
     out << "REVERB_DECAY_PARAMS";
-    for (const auto& curve : song.stemReverbDecayAutomation)
+    for (int s = 0; s < 3; ++s) { const auto& curve = song.stemReverbDecayAutomation[static_cast<size_t>(s)];
         out << ' ' << int(curve.enabled) << ' ' << curve.values[0] << ' ' << curve.values[1] << ' ' << curve.values[2];
+    }
     out << '\n';
     out << "AY " << song.ayNoisePeriod << ' ' << song.ayEnvelopeMode << ' ' << song.ayEnvelopeRamp << '\n';
     out << "HISTORICAL_AY " << song.historicalAyTexture << ' ' << song.historicalAyNoisePeriod
         << ' ' << song.historicalAyEnvelope << ' ' << song.historicalAyEnvelopeRamp << '\n';
     out << "METRIC";
-    for (int meter : song.stemMeter) out << ' ' << meter;
+    for (int s = 0; s < 3; ++s) out << ' ' << song.stemMeter[static_cast<size_t>(s)];
     for (int i = 0; i < song.cellCount; ++i)
         for (int bars : song.bank[static_cast<size_t>(i)].phraseSectionBars) out << ' ' << bars;
     out << '\n';
@@ -347,7 +367,9 @@ bool saveSong(std::ostream& out, const Song& song,
             out << "STROKE " << int(stroke.crossed) << ' ' << stroke.count << '\n';
             for (int p = 0; p < stroke.count; ++p) {
                 const auto& point = stroke.points[static_cast<size_t>(p)];
-                out << "P " << point.x << ' ' << point.y << '\n';
+                out << "P " << point.x << ' ' << point.y;
+                if (version77) out << ' ' << point.pressure;
+                out << '\n';
             }
         }
         for (int n = 0; n < cell.formulaEvents.count; ++n) {
@@ -371,6 +393,33 @@ bool saveSong(std::ostream& out, const Song& song,
             out << '\n';
         }
     }
+    out << "STEM_EXTRAS 2\n";
+    for (int s = 3; s < Song::stemCount; ++s) {
+        const auto index = static_cast<size_t>(s);
+        const auto& gainAuto = song.stemAutomation[index];
+        const auto& panAuto = song.stemPanAutomation[index];
+        const auto& fxAuto = song.stemFxAutomation[index];
+        const auto& filterAuto = song.stemFilterAutomation[index];
+        const auto& crushAuto = song.stemBitcrushAutomation[index];
+        const auto& delayMixAuto = song.stemDelayMixAutomation[index];
+        const auto& delayFeedbackAuto = song.stemDelayFeedbackAutomation[index];
+        const auto& reverbMixAuto = song.stemReverbMixAutomation[index];
+        const auto& reverbDecayAuto = song.stemReverbDecayAutomation[index];
+        out << "STEM " << s << ' ' << int(song.stemRole[index]) << ' ' << song.stemMeter[index]
+            << ' ' << song.stemPan[index] << ' ' << song.stemGain[index] << ' ' << song.stemEffect[index]
+            << ' ' << song.stemFilterCutoff[index] << ' ' << song.stemBitcrushBits[index]
+            << ' ' << song.stemReverbMix[index] << ' ' << song.stemReverbDecay[index]
+            << ' ' << song.stemDelayMix[index] << ' ' << song.stemDelayFeedback[index]
+            << ' ' << int(gainAuto.enabled) << ' ' << gainAuto.levels[0] << ' ' << gainAuto.levels[1] << ' ' << gainAuto.levels[2]
+            << ' ' << int(panAuto.enabled) << ' ' << panAuto.levels[0] << ' ' << panAuto.levels[1] << ' ' << panAuto.levels[2]
+            << ' ' << int(fxAuto.enabled) << ' ' << int(fxAuto.active[0]) << ' ' << int(fxAuto.active[1]) << ' ' << int(fxAuto.active[2])
+            << ' ' << int(filterAuto.enabled) << ' ' << filterAuto.values[0] << ' ' << filterAuto.values[1] << ' ' << filterAuto.values[2]
+            << ' ' << int(crushAuto.enabled) << ' ' << crushAuto.values[0] << ' ' << crushAuto.values[1] << ' ' << crushAuto.values[2]
+            << ' ' << int(delayMixAuto.enabled) << ' ' << delayMixAuto.values[0] << ' ' << delayMixAuto.values[1] << ' ' << delayMixAuto.values[2]
+            << ' ' << int(delayFeedbackAuto.enabled) << ' ' << delayFeedbackAuto.values[0] << ' ' << delayFeedbackAuto.values[1] << ' ' << delayFeedbackAuto.values[2]
+            << ' ' << int(reverbMixAuto.enabled) << ' ' << reverbMixAuto.values[0] << ' ' << reverbMixAuto.values[1] << ' ' << reverbMixAuto.values[2]
+            << ' ' << int(reverbDecayAuto.enabled) << ' ' << reverbDecayAuto.values[0] << ' ' << reverbDecayAuto.values[1] << ' ' << reverbDecayAuto.values[2] << '\n';
+    }
     return bool(out);
 }
 
@@ -379,7 +428,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
                          bool allowVersions) {
     std::string record;
     if (!line(in, record)) return false;
-    const bool version76 = record == "RISCO_SONG_V76";
+    const bool version77 = record == "RISCO_SONG_V77";
+    const bool version76 = record == "RISCO_SONG_V76" || version77;
     const bool version75 = record == "RISCO_SONG_V75" || version76;
     const bool version74 = record == "RISCO_SONG_V74" || version75;
     const bool version73 = record == "RISCO_SONG_V73" || version74;
@@ -451,6 +501,7 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         record != "RISCO_SONG_V3" && record != "RISCO_SONG_V4" &&
         record != "RISCO_SONG_V5" && record != "RISCO_SONG_V6" &&
         record != "RISCO_SONG_V7" && record != "RISCO_SONG_V8" && !version9 && !version18 && !version20 && !version22 && !version72 && !version76) return false;
+    constexpr int stemSlots = 3;
     const bool version2 = record == "RISCO_SONG_V2" || record == "RISCO_SONG_V3" ||
                           record == "RISCO_SONG_V4" || record == "RISCO_SONG_V5" ||
                           record == "RISCO_SONG_V6" || record == "RISCO_SONG_V7" || record == "RISCO_SONG_V8" || version9;
@@ -472,7 +523,7 @@ static bool loadSongImpl(std::istream& in, Song& destination,
     auto nextStorage = std::make_unique<Song>();
     Song& next = *nextStorage;
     int cells = 0, placements = 0;
-    std::array<PhraseSectionBars, 64> loadedSectionBars{};
+    std::array<PhraseSectionBars, Song::bankCapacity> loadedSectionBars{};
     for (auto& bars : loadedSectionBars) bars = {{1,1,1,1}};
     std::array<int, Song::stemCount> stemRoleValues{};
     {
@@ -480,14 +531,18 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         if (!(parser >> next.bpm >> next.beatsPerBar) ||
             (version4 && !(parser >> next.bitDepth)) ||
             (version5 && !(parser >> next.timbreMode)) ||
-            (version8 && !(parser >> next.shapeMode >> next.shapeDrive)) ||
-            (version11 && !(parser >> next.stemPan[0] >> next.stemPan[1] >> next.stemPan[2])) ||
-            (version12 && !(parser >> next.stemGain[0] >> next.stemGain[1] >> next.stemGain[2])) ||
-            !(parser >> cells >> placements) ||
+            (version8 && !(parser >> next.shapeMode >> next.shapeDrive))) return false;
+        for (int stem = 0; version11 && stem < stemSlots; ++stem)
+            if (!(parser >> next.stemPan[static_cast<size_t>(stem)])) return false;
+        for (int stem = 0; version12 && stem < stemSlots; ++stem)
+            if (!(parser >> next.stemGain[static_cast<size_t>(stem)])) return false;
+        if (!(parser >> cells >> placements) ||
             (version16 && !(parser >> next.masterGain)) ||
             (version21 && !(parser >> next.interStemResponse)) ||
-            (version23 && !(parser >> next.formulaMetricGrouping)) ||
-            (version24 && !(parser >> stemRoleValues[0] >> stemRoleValues[1] >> stemRoleValues[2])) || !complete(parser) ||
+            (version23 && !(parser >> next.formulaMetricGrouping))) return false;
+        for (int stem = 0; version24 && stem < stemSlots; ++stem)
+            if (!(parser >> stemRoleValues[static_cast<size_t>(stem)])) return false;
+        if (!complete(parser) ||
             !std::isfinite(next.bpm) || next.bpm < 40.0 || next.bpm > 240.0 ||
             (next.bitDepth != 8 && next.bitDepth != 16) ||
             next.timbreMode < 0 || next.timbreMode > (version59 ? 6 : version51 ? 4 : version33 ? 2 : 1) ||
@@ -512,7 +567,7 @@ static bool loadSongImpl(std::istream& in, Song& destination,
             cells < 0 || cells > int(next.bank.size()) ||
             placements < 0 || placements > int(next.grid.size())) return false;
         if (version24)
-            for (int stem = 0; stem < Song::stemCount; ++stem)
+            for (int stem = 0; stem < stemSlots; ++stem)
                 next.stemRole[static_cast<size_t>(stem)] =
                     static_cast<CellRole>(stemRoleValues[static_cast<size_t>(stem)]);
     }
@@ -521,8 +576,10 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         int compound = 0;
-        if (!(parser >> tag >> next.responsePolicy >> next.stemEffect[0] >> next.stemEffect[1] >> next.stemEffect[2] >> compound) ||
-            tag != "SETTINGS" || !complete(parser) || next.responsePolicy < 0 || next.responsePolicy > (version53 ? 7 : version40 ? 6 : version39 ? 4 : version38 ? 3 : 2) ||
+        if (!(parser >> tag >> next.responsePolicy) || tag != "SETTINGS") return false;
+        for (int stem = 0; stem < stemSlots; ++stem)
+            if (!(parser >> next.stemEffect[static_cast<size_t>(stem)])) return false;
+        if (!(parser >> compound) || !complete(parser) || next.responsePolicy < 0 || next.responsePolicy > (version53 ? 7 : version40 ? 6 : version39 ? 4 : version38 ? 3 : 2) ||
             compound < 0 || compound > 1 || (compound == 1 && next.beatsPerBar != 3) ||
             std::any_of(next.stemEffect.begin(), next.stemEffect.end(), [version42, version44](int effect) { return effect < 0 || effect > (version44 ? 9 : version42 ? 7 : 4); })) return false;
         next.compoundSixEight = compound == 1;
@@ -544,7 +601,7 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "DELAY") return false;
-        for (int s = 0; s < Song::stemCount; ++s) {
+        for (int s = 0; s < stemSlots; ++s) {
             auto& mix = next.stemDelayMix[static_cast<size_t>(s)];
             auto& feedback = next.stemDelayFeedback[static_cast<size_t>(s)];
             if (!(parser >> mix >> feedback) || !std::isfinite(mix) || !std::isfinite(feedback) ||
@@ -557,8 +614,10 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "FILTER") return false;
-        for (auto& hz : next.stemFilterCutoff)
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& hz = next.stemFilterCutoff[static_cast<size_t>(s)];
             if (!(parser >> hz) || !std::isfinite(hz) || (hz != 0 && (hz < 80 || hz > 16000))) return false;
+        }
         if (!complete(parser)) return false;
     }
     if (version67) {
@@ -566,8 +625,10 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "BITCRUSH") return false;
-        for (auto& bits : next.stemBitcrushBits)
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& bits = next.stemBitcrushBits[static_cast<size_t>(s)];
             if (!(parser >> bits) || (bits != 0 && (bits < 2 || bits > 16))) return false;
+        }
         if (!complete(parser)) return false;
     }
     if (version68) {
@@ -575,7 +636,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "BITCRUSH_PARAMS") return false;
-        for (auto& curve : next.stemBitcrushAutomation) {
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& curve = next.stemBitcrushAutomation[static_cast<size_t>(s)];
             int enabled = 0;
             if (!(parser >> enabled >> curve.values[0] >> curve.values[1] >> curve.values[2]) || (enabled != 0 && enabled != 1)) return false;
             curve.enabled = enabled == 1;
@@ -589,11 +651,15 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "REVERB") return false;
-        for (auto& mix : next.stemReverbMix)
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& mix = next.stemReverbMix[static_cast<size_t>(s)];
             if (!(parser >> mix) || !std::isfinite(mix) || mix < 0 || mix > 0.6f) return false;
+        }
         if (version47)
-            for (auto& seconds : next.stemReverbDecay)
+            for (int s = 0; s < stemSlots; ++s) {
+                auto& seconds = next.stemReverbDecay[static_cast<size_t>(s)];
                 if (!(parser >> seconds) || !std::isfinite(seconds) || (seconds != 0 && (seconds < 0.25f || seconds > 3))) return false;
+            }
         if (!complete(parser)) return false;
     }
     if (version48) {
@@ -601,7 +667,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "AUTOMATION") return false;
-        for (auto& curve : next.stemAutomation) {
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& curve = next.stemAutomation[static_cast<size_t>(s)];
             int enabled;
             if (!(parser >> enabled) || enabled < 0 || enabled > 1) return false;
             curve.enabled = enabled == 1;
@@ -615,7 +682,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         {
             std::istringstream parser(record); std::string tag;
             if (!(parser >> tag) || tag != "PAN_AUTOMATION") return false;
-            for (auto& curve : next.stemPanAutomation) {
+            for (int s = 0; s < stemSlots; ++s) {
+                auto& curve = next.stemPanAutomation[static_cast<size_t>(s)];
                 int enabled = 0;
                 if (!(parser >> enabled) || enabled < 0 || enabled > 1) return false;
                 curve.enabled = enabled == 1;
@@ -628,7 +696,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         {
             std::istringstream parser(record); std::string tag;
             if (!(parser >> tag) || tag != "FX_AUTOMATION") return false;
-            for (auto& curve : next.stemFxAutomation) {
+            for (int s = 0; s < stemSlots; ++s) {
+                auto& curve = next.stemFxAutomation[static_cast<size_t>(s)];
                 int enabled = 0;
                 if (!(parser >> enabled) || enabled < 0 || enabled > 1) return false;
                 curve.enabled = enabled == 1;
@@ -646,7 +715,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "FX_PARAMS") return false;
-        for (auto& curve : next.stemFilterAutomation) {
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& curve = next.stemFilterAutomation[static_cast<size_t>(s)];
             int enabled = 0;
             if (!(parser >> enabled >> curve.values[0] >> curve.values[1] >> curve.values[2]) ||
                 (enabled != 0 && enabled != 1)) return false;
@@ -661,7 +731,7 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "DELAY_PARAMS") return false;
-        for (int s = 0; s < Song::stemCount; ++s) {
+        for (int s = 0; s < stemSlots; ++s) {
             auto& mix = next.stemDelayMixAutomation[static_cast<size_t>(s)];
             auto& feedback = next.stemDelayFeedbackAutomation[static_cast<size_t>(s)];
             int mixEnabled = 0, feedbackEnabled = 0;
@@ -680,7 +750,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "REVERB_PARAMS") return false;
-        for (auto& curve : next.stemReverbMixAutomation) {
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& curve = next.stemReverbMixAutomation[static_cast<size_t>(s)];
             int enabled = 0;
             if (!(parser >> enabled >> curve.values[0] >> curve.values[1] >> curve.values[2]) || (enabled != 0 && enabled != 1)) return false;
             curve.enabled = enabled == 1;
@@ -693,7 +764,8 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "REVERB_DECAY_PARAMS") return false;
-        for (auto& curve : next.stemReverbDecayAutomation) {
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& curve = next.stemReverbDecayAutomation[static_cast<size_t>(s)];
             int enabled = 0;
             if (!(parser >> enabled >> curve.values[0] >> curve.values[1] >> curve.values[2]) || (enabled != 0 && enabled != 1)) return false;
             curve.enabled = enabled == 1;
@@ -729,8 +801,10 @@ static bool loadSongImpl(std::istream& in, Song& destination,
         std::istringstream parser(record);
         std::string tag;
         if (!(parser >> tag) || tag != "METRIC") return false;
-        for (auto& meter : next.stemMeter)
+        for (int s = 0; s < stemSlots; ++s) {
+            auto& meter = next.stemMeter[static_cast<size_t>(s)];
             if (!(parser >> meter) || (meter != 0 && (meter < 2 || meter > 8))) return false;
+        }
         for (int i = 0; i < cells; ++i)
             for (auto& bars : loadedSectionBars[static_cast<size_t>(i)])
                 if (!(parser >> bars) || bars < 1 || bars > 4) return false;
@@ -903,9 +977,14 @@ static bool loadSongImpl(std::istream& in, Song& destination,
                 if (!line(in, record)) return false;
                 auto& point = stroke.points[static_cast<size_t>(p)];
                 std::istringstream parser(record);
-                if (!(parser >> tag >> point.x >> point.y) || !complete(parser) || tag != "P" ||
+                if (!(parser >> tag >> point.x >> point.y) || tag != "P") return false;
+                point.pressure = -1.0f;
+                if (version77 && !(parser >> point.pressure)) return false;
+                if (!complete(parser) ||
                     !std::isfinite(point.x) || !std::isfinite(point.y) ||
-                    point.x < 0.0f || point.x > 1.0f || point.y < 0.0f || point.y > 1.0f)
+                    point.x < 0.0f || point.x > 1.0f || point.y < 0.0f || point.y > 1.0f ||
+                    !std::isfinite(point.pressure) ||
+                    (point.pressure != -1.0f && (point.pressure < 0.0f || point.pressure > 1.0f)))
                     return false;
             }
         }
@@ -997,14 +1076,90 @@ static bool loadSongImpl(std::istream& in, Song& destination,
             in.read(version.serializedSong.data(),static_cast<std::streamsize>(payloadBytes));
             if (in.gcount() != static_cast<std::streamsize>(payloadBytes) || in.get() != '\n') return false;
             std::istringstream snapshotStream(version.serializedSong);
-            Song snapshot;
-            if (!loadSongImpl(snapshotStream,snapshot,nullptr,nullptr,false)) return false;
+            auto snapshot = std::make_unique<Song>();
+            if (!loadSongImpl(snapshotStream,*snapshot,nullptr,nullptr,false)) return false;
             totalBytes += payloadBytes;
             versions.push_back(std::move(version));
         }
         if (activeVersion >= count) return false;
     }
-    if (line(in, record)) return false; // No hidden records after the declared counts.
+    if (line(in, record)) {
+        std::istringstream header(record);
+        int extraCount = 0;
+        if (!(header >> tag >> extraCount) || !complete(header) || tag != "STEM_EXTRAS" || extraCount != 2)
+            return false;
+        for (int s = 3; s < Song::stemCount; ++s) {
+            if (!line(in, record)) return false;
+            std::istringstream parser(record);
+            int stem = -1, role = 0, gainEnabled = 0, panEnabled = 0, fxEnabled = 0;
+            int filterEnabled = 0, crushEnabled = 0, delayMixEnabled = 0, delayFeedbackEnabled = 0;
+            int reverbMixEnabled = 0, reverbDecayEnabled = 0;
+            auto& nextSong = next;
+            const auto index = static_cast<size_t>(s);
+            if (!(parser >> tag >> stem >> role >> nextSong.stemMeter[index] >> nextSong.stemPan[index]
+                  >> nextSong.stemGain[index] >> nextSong.stemEffect[index] >> nextSong.stemFilterCutoff[index]
+                  >> nextSong.stemBitcrushBits[index] >> nextSong.stemReverbMix[index] >> nextSong.stemReverbDecay[index]
+                  >> nextSong.stemDelayMix[index] >> nextSong.stemDelayFeedback[index]
+                  >> gainEnabled >> nextSong.stemAutomation[index].levels[0]
+                  >> nextSong.stemAutomation[index].levels[1] >> nextSong.stemAutomation[index].levels[2]
+                  >> panEnabled >> nextSong.stemPanAutomation[index].levels[0]
+                  >> nextSong.stemPanAutomation[index].levels[1] >> nextSong.stemPanAutomation[index].levels[2]
+                  >> fxEnabled) || tag != "STEM" || stem != s ||
+                role < int(CellRole::free) || role > int(CellRole::texture) ||
+                (nextSong.stemMeter[index] != 0 && (nextSong.stemMeter[index] < 2 || nextSong.stemMeter[index] > 8)) ||
+                !std::isfinite(nextSong.stemPan[index]) || nextSong.stemPan[index] < -1 || nextSong.stemPan[index] > 1 ||
+                !std::isfinite(nextSong.stemGain[index]) || nextSong.stemGain[index] < 0 || nextSong.stemGain[index] > 1.5f ||
+                nextSong.stemEffect[index] < 0 || nextSong.stemEffect[index] > 9 ||
+                !std::isfinite(nextSong.stemFilterCutoff[index]) ||
+                (nextSong.stemFilterCutoff[index] != 0 && (nextSong.stemFilterCutoff[index] < 80 || nextSong.stemFilterCutoff[index] > 16000)) ||
+                (nextSong.stemBitcrushBits[index] != 0 && (nextSong.stemBitcrushBits[index] < 2 || nextSong.stemBitcrushBits[index] > 16)) ||
+                !std::isfinite(nextSong.stemReverbMix[index]) || nextSong.stemReverbMix[index] < 0 || nextSong.stemReverbMix[index] > 0.6f ||
+                !std::isfinite(nextSong.stemReverbDecay[index]) ||
+                (nextSong.stemReverbDecay[index] != 0 && (nextSong.stemReverbDecay[index] < 0.25f || nextSong.stemReverbDecay[index] > 3)) ||
+                !std::isfinite(nextSong.stemDelayMix[index]) || nextSong.stemDelayMix[index] < 0 || nextSong.stemDelayMix[index] > 0.6f ||
+                !std::isfinite(nextSong.stemDelayFeedback[index]) || nextSong.stemDelayFeedback[index] < 0 || nextSong.stemDelayFeedback[index] > 0.6f ||
+                (gainEnabled != 0 && gainEnabled != 1) || (panEnabled != 0 && panEnabled != 1) ||
+                (fxEnabled != 0 && fxEnabled != 1)) return false;
+            auto& gainAuto = nextSong.stemAutomation[index];
+            auto& panAuto = nextSong.stemPanAutomation[index];
+            auto& fxAuto = nextSong.stemFxAutomation[index];
+            gainAuto.enabled = gainEnabled == 1;
+            panAuto.enabled = panEnabled == 1;
+            fxAuto.enabled = fxEnabled == 1;
+            for (float value : gainAuto.levels) if (!std::isfinite(value) || value < 0 || value > 1) return false;
+            for (float value : panAuto.levels) if (!std::isfinite(value) || value < -1 || value > 1) return false;
+            for (size_t point = 0; point < fxAuto.active.size(); ++point) {
+                int active = 0;
+                if (!(parser >> active) || (active != 0 && active != 1)) return false;
+                fxAuto.active[point] = active == 1;
+            }
+            auto readParameters = [&parser](ParameterAutomation& curve, int& enabled,
+                                             float minimum, float maximum, bool allowZero) {
+                if (!(parser >> enabled >> curve.values[0] >> curve.values[1] >> curve.values[2]) ||
+                    (enabled != 0 && enabled != 1)) return false;
+                curve.enabled = enabled == 1;
+                for (const float value : curve.values)
+                    if (!std::isfinite(value) ||
+                        (!(allowZero && value == 0.0f) && (value < minimum || value > maximum))) return false;
+                return true;
+            };
+            if (!readParameters(nextSong.stemFilterAutomation[index], filterEnabled, 80, 16000, false) ||
+                !readParameters(nextSong.stemBitcrushAutomation[index], crushEnabled, 2, 16, true) ||
+                !readParameters(nextSong.stemDelayMixAutomation[index], delayMixEnabled, 0, 0.6f, false) ||
+                !readParameters(nextSong.stemDelayFeedbackAutomation[index], delayFeedbackEnabled, 0, 0.6f, false) ||
+                !readParameters(nextSong.stemReverbMixAutomation[index], reverbMixEnabled, 0, 0.6f, false) ||
+                !readParameters(nextSong.stemReverbDecayAutomation[index], reverbDecayEnabled, 0.25f, 3, true) ||
+                !complete(parser)) return false;
+            nextSong.stemRole[index] = static_cast<CellRole>(role);
+            nextSong.stemFilterAutomation[index].enabled = filterEnabled == 1;
+            nextSong.stemBitcrushAutomation[index].enabled = crushEnabled == 1;
+            nextSong.stemDelayMixAutomation[index].enabled = delayMixEnabled == 1;
+            nextSong.stemDelayFeedbackAutomation[index].enabled = delayFeedbackEnabled == 1;
+            nextSong.stemReverbMixAutomation[index].enabled = reverbMixEnabled == 1;
+            nextSong.stemReverbDecayAutomation[index].enabled = reverbDecayEnabled == 1;
+        }
+    } else if (!in.eof()) return false;
+    if (line(in, record)) return false;
     if (!in.eof()) return false;
     destination = std::move(next);
     if (loadedVersions) *loadedVersions = std::move(versions);

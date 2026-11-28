@@ -19,6 +19,7 @@
 #include "RiscoLogo.hpp"
 #include "DollchanCatalog.hpp"
 #include "SongExport.hpp"
+#include "AudioSnapshotRetention.hpp"
 #include "AlbumGenerationJob.hpp"
 #include "AlbumRenderJob.hpp"
 #include "HelpReader.hpp"
@@ -44,6 +45,40 @@
 
 namespace {
 juce::String utf8(const char* text) { return juce::String(juce::CharPointer_UTF8(text)); }
+class AudioReadGuard {
+public:
+    explicit AudioReadGuard(std::atomic<unsigned>& readers) noexcept : readers_(readers) {
+        readers_.fetch_add(1, std::memory_order_acq_rel);
+    }
+    ~AudioReadGuard() { readers_.fetch_sub(1, std::memory_order_release); }
+private:
+    std::atomic<unsigned>& readers_;
+};
+bool parseAlbumTrackProfiles(const juce::String& input, int trackCount,
+                             std::array<risco::AlbumMusicProfile, risco::maxAlbumTracks>& profiles) {
+    profiles.fill(risco::AlbumMusicProfile::automatic);
+    auto compact = input.toUpperCase().removeCharacters(" \t\r\n").toStdString();
+    if (compact.empty()) return true;
+    int track = 0;
+    std::size_t start = 0;
+    while (start <= compact.size()) {
+        const auto separator = compact.find(',', start);
+        const auto end = separator == std::string::npos ? compact.size() : separator;
+        if (end - start != 1 || track >= trackCount) return false;
+        risco::AlbumMusicProfile profile;
+        switch (compact[start]) {
+            case 'O': profile = risco::AlbumMusicProfile::original; break;
+            case 'R': profile = risco::AlbumMusicProfile::related; break;
+            case 'C': profile = risco::AlbumMusicProfile::contrasting; break;
+            case '-': profile = risco::AlbumMusicProfile::automatic; break;
+            default: return false;
+        }
+        profiles[static_cast<size_t>(track++)] = profile;
+        if (separator == std::string::npos) break;
+        start = separator + 1;
+    }
+    return true;
+}
 constexpr std::array<std::uint32_t, 6> graffitiColours{
     0xffff786a, 0xff61e2f0, 0xffc3eb6b,
     0xffc9a2ff, 0xffffac68, 0xffff8dc5};
@@ -205,10 +240,10 @@ private:
                 utf8("Risco es un instrumento generativo de la familia RASGO, creado por Lúcio de Araújo. La escritura, el dibujo, los gestos y las funciones matemáticas se convierten en materia para componer y transformar sonido.\n\nLa interpretación puede guardar funciones y dibujos en células, organizarlos en la cuadrícula musical y recuperarlos o variarlos. Bytebeat directo evalúa una expresión a partir del contador continuo t y funciona a 8 bits; el selector de 8/16 bits controla la resolución de audio del motor de notas.\n\nEl proyecto está en desarrollo. Consulte TAREFAS.md para conocer su estado y sus límites.")
             },
             {
-                utf8("1. No quadro ENTRADA ÚNICA, clique em Digitar texto ou Desenhar. Os dois modos ocupam o mesmo lugar; o título mostra o modo atual e os dados permanecem guardados ao alternar. Use Ouvir texto/desenho para ouvir a entrada; a pontuação cria pausas.\n2. No modo desenho, arraste até 12 traços. Cada traço vira de 1 a 4 notas conforme o detalhe: pontos mais altos geram notas mais agudas, e a inclinação altera a articulação. A seed do desenho escolhe uma tonalidade e uma progressão; acordes de apoio acompanham os grupos de traços. Glifo da fonte transforma o primeiro caractere em contorno.\n3. Escolha Função 8 bits ou escreva uma expressão com t e pressione Aplicar fórmula. Gerar + tocar inicia uma sequência de cálculos a partir da origem e do seed selecionados.\n4. Dê um nome à célula e use Guardar célula. Escolha duração e repetições; clique numa fileira vazia da grade para inserir. Arraste o centro horizontalmente para mover no tempo e verticalmente para mudar entre os três stems. Shift+arraste marca um loop.\n5. Tocar música executa a composição; o marcador âmbar indica o ponto atual e o cabeçalho mostra a célula/fonte ativa. Início reinicia; REC inclui novas gerações; BPM e MASTER ajustam andamento e volume.\n\nO contador t da reprodução Bytebeat continua entre fórmulas. Use Reiniciar t para voltar ao início. Os três stems organizam as células, mas ainda tocam numa mixagem única, sem volumes ou saídas independentes."),
-                utf8("1. Enter a word or sentence in the text field. Use “Tocar entrada” to hear it; punctuation creates pauses.\n2. Draw on the grid by dragging, with up to 12 strokes. Each stroke becomes 1–4 notes depending on its detail: higher points produce higher pitches, and slope affects articulation. The drawing seed selects a key and progression; supporting chords accompany groups of strokes. “Glifo da fonte” turns the first character into an outline.\n3. Choose “Função 8 bits” or enter an expression using t and press “Aplicar fórmula”. “Gerar + tocar” starts a sequence of calculations from the selected source and seed.\n4. Name a cell and choose “Guardar célula”. Set its length and repeats; click an empty lane to place it. Drag the center horizontally to move in time, vertically to move between three stems. Shift+drag marks a loop range.\n5. “Tocar música” runs the composition. The amber marker shows the current position and the header names the active cell/source. REC includes new generations. “Início” restarts; BPM and MASTER set tempo and volume.\n\nThe Bytebeat sample counter t continues between formulas. Use “Reiniciar t” to start it over. The three stems organize cells but still play through one mix, without independent volume or outputs."),
-                utf8("1. Saisissez un mot ou une phrase. Utilisez « Tocar entrada » pour l’écouter ; la ponctuation crée des pauses.\n2. Dessinez sur la grille en faisant glisser le pointeur, jusqu'à 12 traits. Chaque trait produit 1 à 4 notes selon son niveau de détail : les points plus hauts donnent des notes plus aiguës et la pente modifie l’articulation. La graine du dessin choisit une tonalité et une progression ; des accords accompagnent les groupes de traits. « Glifo da fonte » transforme le premier caractère en contour.\n3. Choisissez « Função 8 bits » ou saisissez une expression avec t, puis « Aplicar fórmula ». « Gerar + tocar » lance une suite de calculs depuis la source et la graine choisies.\n4. Nommez une cellule et choisissez « Guardar célula ». Réglez sa durée ; cliquez sur une ligne vide pour l’insérer. Faites glisser son centre horizontalement pour la déplacer dans le temps, verticalement pour changer entre les trois stems. Maj+glisser marque une boucle.\n5. « Tocar música » joue la composition. REC inclut les nouvelles générations. « Início » redémarre ; BPM et MASTER règlent tempo et volume.\n\nLe compteur Bytebeat t continue entre les formules. « Reiniciar t » le remet au début. Les trois stems organisent les cellules, mais passent encore par un mixage unique, sans volume ni sortie indépendante."),
-                utf8("1. Escriba una palabra o frase. Use « Tocar entrada » para escucharla; la puntuación crea pausas.\n2. Dibuje en la cuadrícula arrastrando, con hasta 12 trazos. Cada trazo produce 1–4 notas según su detalle: los puntos más altos generan notas más agudas y la inclinación modifica la articulación. La semilla del dibujo elige una tonalidad y una progresión; acordes de apoyo acompañan los grupos de trazos. « Glifo da fonte » convierte el primer carácter en contorno.\n3. Elija « Função 8 bits » o escriba una expresión con t y pulse « Aplicar fórmula ». « Gerar + tocar » inicia una secuencia de cálculos a partir del origen y la semilla elegidos.\n4. Nombre una célula y pulse « Guardar célula ». Defina duración; haga clic en una fila vacía para insertarla. Arrastre el centro horizontalmente para moverla en el tiempo y verticalmente para cambiar entre los tres stems. Mayús+arrastrar marca un loop.\n5. « Tocar música » reproduce la composición. REC incluye nuevas generaciones. « Início » reinicia; BPM y MASTER ajustan tempo y volumen.\nt, el contador Bytebeat, continúa entre fórmulas. Use « Reiniciar t » para volver al inicio. Los tres stems organizan las células, pero aún suenan en una única mezcla, sin volumen ni salidas independientes.")
+                utf8("1. No quadro ENTRADA ÚNICA, digite um texto ou desenhe. Use Ouvir texto/desenho para escutar a entrada.\n2. No desenho, arraste até 12 traços. A altura e a inclinação dos pontos orientam as notas; a seed escolhe tonalidade e progressão.\n3. Para levar material à composição, escolha Stem: Melodia, Harmonia, Baixo, Ritmo ou Textura. Dê nome à célula e use Guardar célula. Com AUTO ligado, Inserir célula ou clicar numa área vazia escolhe tempo e canal; o clique define a referência temporal. Desligado, o seletor Stem e o tempo escolhido são manuais. Na escuta ao vivo, AUTO desenvolve as cinco camadas.\n4. Arraste uma célula na horizontal para mudar o tempo e na vertical para trocar de canal. Ajuste duração e repetições; Shift+arraste marca um loop.\n5. Tocar música executa a grade; o marcador âmbar mostra a posição. Início reinicia; REC inclui novas gerações; BPM e MASTER ajustam andamento e volume.\n\nRitmo reúne ataques curtos; Textura reúne camadas sustentadas. Os cinco canais têm volume, pan, mute, solo e efeitos próprios."),
+                utf8("1. In ENTRADA ÚNICA, type text or draw. Use Play text/drawing to hear the input.\n2. A drawing can contain up to 12 strokes. Point height and slope guide the notes; its seed selects a key and progression.\n3. To place material in the composition, choose Stem: Melody, Harmony, Bass, Rhythm or Texture. Name the cell and choose Store cell. With AUTO on, Insert cell or clicking an empty grid area chooses time and lane; your click gives the timing reference. When off, Stem and time are manual. In live listening, AUTO develops all five layers.\n4. Drag a cell horizontally to change its time and vertically to move it between channels. Set length and repeats; Shift+drag marks a loop.\n5. Play song runs the grid; the amber marker shows its position. Restart returns to the beginning; REC includes new generations; BPM and MASTER set tempo and volume.\n\nRhythm carries short attacks; Texture carries sustained layers. All five channels have independent volume, pan, mute, solo and effects."),
+                utf8("1. Saisissez un texte ou dessinez dans ENTRADA ÚNICA. Utilisez Écouter texte/dessin pour entendre l’entrée.\n2. Un dessin peut contenir jusqu’à 12 traits. La hauteur et l’inclinaison guident les notes ; la seed choisit tonalité et progression.\n3. Pour placer le matériau, choisissez Stem : Mélodie, Harmonie, Basse, Rythme ou Texture. Nommez la cellule et choisissez Guardar célula. Avec AUTO, Inserir célula ou un clic dans une case vide choisit le temps et la piste ; le clic sert de repère temporel. Sans AUTO, Stem et temps restent manuels. En écoute directe, AUTO développe les cinq couches.\n4. Faites glisser une cellule horizontalement pour changer son temps et verticalement pour changer de canal. Réglez durée et répétitions ; Maj+glisser marque une boucle.\n5. Tocar música joue la grille. Rythme porte des attaques courtes ; Texture porte des couches soutenues. Les cinq canaux disposent de volume, pan, mute, solo et effets indépendants."),
+                utf8("1. Escriba texto o dibuje en ENTRADA ÚNICA. Use Oír texto/dibujo para escuchar la entrada.\n2. Un dibujo puede tener hasta 12 trazos. La altura y la inclinación guían las notas; la seed elige tonalidad y progresión.\n3. Para poner material en la composición, elija Stem: Melodía, Armonía, Bajo, Ritmo o Textura. Nombre la célula y pulse Guardar célula. Con AUTO activo, Insertar célula o un clic en un área vacía elige tiempo y canal; el clic sirve como referencia temporal. Sin AUTO, Stem y tiempo son manuales. En la escucha en vivo, AUTO desarrolla las cinco capas.\n4. Arrastre una célula horizontalmente para cambiar el tiempo y verticalmente para cambiar de canal. Ajuste duración y repeticiones; Mayús+arrastrar marca un loop.\n5. Tocar música reproduce la cuadrícula. Ritmo lleva ataques cortos; Textura lleva capas sostenidas. Los cinco canales tienen volumen, pan, mute, solo y efectos independientes.")
             },
             {
                 utf8("Bytebeat calcula valores de muestra directamente. t es el contador de muestras: una fórmula relaciona esse tiempo con operadores como +, *, >>, &, | y ^.\n\nExemplo para experimentar:\nt * ((t >> 5) | (t >> 8))\n\nOs deslocamentos agrupam mudanças em escalas temporais diferentes; a combinação cria pulsos, alturas e timbres. Pequenas alterações de constante ou operador podem mudar bastante o resultado.\n\nUma função guardada é também um objeto de composição: pode ser repetida, colocada em outra posição ou recombinada. Derivadas, integrais e sistemas dinâmicos ainda são pesquisa futura no Risco; o editor atual aceita a gramática Bytebeat descrita em README.md."),
@@ -219,9 +254,9 @@ private:
         };
         static const juce::String tutorial[4] = {
                 utf8("FLUXO: DE ONDE VEM O SOM?\n\nTEXTO ou DESENHO ── Ouvir texto/desenho ──> SOM AO VIVO (fora da grade)\n       └── Guardar célula ──> BANCO ── Inserir célula ──> GRADE\n\nTEXTO / DESENHO / NÚMERO ── origem do seed ── Gerar + tocar\n       └──> NOVA FÓRMULA BYTEBEAT ──> som ao vivo\n                    └──> guardada no BANCO + colocada na GRADE\n\nFÓRMULA DIGITADA ── Compilar fórmula ── Ouvir fórmula (ao vivo)\n       ├── Guardar célula ──> BANCO; com REC, também entra na GRADE\n       └── Fórmula → notas ── pré-escuta; Guardar frase ──> célula no BANCO + GRADE\n\nBANCO = materiais guardados nesta música. GRADE = sequência de células que forma a música. Material no banco não toca na música completa até entrar na grade.\n\nPARA COMPOR: comece com uma célula curta; ouça a prévia, coloque-a na grade e ouça a música. Repita ou varie a célula para criar reconhecimento; acrescente outra para resposta ou contraste. Use BPM para mudar o pulso e arraste os blocos para escolher início e duração. Tocar música executa a grade; Salvar grava banco e grade no arquivo da performance. Salvar e Abrir abrem o seletor do sistema: escolha pasta e nome do arquivo; Salvar acrescenta .risco. Não há salvamento automático; use Salvar antes de fechar. O banco da música começa vazio em nova abertura; o repositório de fórmulas é local, persistente e independente. As cores da tela indicam ao vivo, gerar, banco e grade."),
-            utf8("QUICK START\n\n1 · LISTEN. “Play text/drawing” plays the writing or drawing. “Play formula” plays the Bytebeat expression. “Play cell” plays only the selected cell. “Play song” plays the entire grid. “Stop” stops audio.\n\n2 · CREATE. Draw up to 12 strokes; sound follows the gesture. To derive a formula from the drawing, choose “Drawing” as seed source and press “Generate + play”. “Compile formula” prepares a typed expression.\n\n3 · SAVE AND ARRANGE. “Store cell” stores material in the bank. Click an empty lane to place a cell; drag its center horizontally to move in time or vertically to change between three stems. Drag the left edge to choose the source start and the right edge to set its length. Shift+drag marks a loop range.\n\n4 · PERFORM. BPM sets tempo, MASTER sets volume, and REC records generated material. The stems organize cells and still share one output mix. “Restart” restarts playback; “Save / WAV” writes the song file."),
-            utf8("PRISE EN MAIN\n\n1 · ÉCOUTER. « Écouter texte/dessin » joue l'écriture ou le dessin. « Écouter formule » joue l'expression Bytebeat. « Écouter cellule » joue la cellule choisie. « Jouer morceau » joue toute la grille. « Arrêter » arrête le son.\n\n2 · CRÉER. Dessinez jusqu'à 12 traits ; le son suit le geste. Pour créer une formule à partir du dessin, choisissez « Dessin » comme source de graine, puis « Générer + jouer ». « Compiler formule » prépare une expression saisie.\n\n3 · CONSERVER ET ARRANGER. « Garder cellule » place le matériau dans la banque. Cliquez sur une ligne vide pour insérer une cellule ; faites glisser son centre horizontalement pour la déplacer dans le temps, verticalement pour changer entre les trois stems. Les bords règlent le fragment source et sa durée. Maj+glisser marque une boucle.\n\n4 · JOUER. BPM règle le tempo, MASTER le volume et REC enregistre les générations. Les stems organisent les cellules mais partagent encore un mixage. « Début » redémarre ; « Sauver / WAV » enregistre le fichier musical."),
-            utf8("INICIO RÁPIDO\n\n1 · ESCUCHAR. « Oír texto/dibujo » reproduce el texto o dibujo. « Oír fórmula » reproduce la expresión Bytebeat. « Oír célula » reproduce solo la célula elegida. « Tocar pieza » reproduce toda la cuadrícula. « Detener » detiene el sonido.\n\n2 · CREAR. Dibuje hasta 12 trazos; el sonido sigue el gesto. Para generar una fórmula desde el dibujo, elija « Dibujo » como origen de seed y pulse « Generar + tocar ». « Compilar fórmula » prepara una expresión escrita.\n\n3 · GUARDAR Y ORGANIZAR. « Guardar célula » pone el material en el banco. Haga clic en una fila vacía para insertar; arrastre el centro horizontalmente para mover en el tiempo y verticalmente para cambiar entre los tres stems. Los bordes ajustan el fragmento fuente y la duración. Mayús+arrastrar marca un loop.\n\n4 · TOCAR. BPM ajusta el tempo, MASTER el volumen y REC registra lo generado. Los stems organizan las células, pero comparten una sola mezcla. « Inicio » reinicia; « Guardar / WAV » guarda el archivo musical.")
+            utf8("QUICK START\n\nChoose the destination in Stem: Melody, Harmony, Bass, Rhythm or Texture. Type or draw, name the cell, choose Store cell, then click a row in the grid. Drag vertically to change channel and horizontally to change time. Rhythm carries short attacks; Texture carries sustained layers in a full track. All five channels have their own mixer and effects.") ,
+            utf8("PRISE EN MAIN\n\nChoisissez la destination dans Stem : Mélodie, Harmonie, Basse, Rythme ou Texture. Écrivez ou dessinez, nommez la cellule, choisissez Guardar célula puis cliquez sur une ligne de la grille. Glissez verticalement pour changer de canal et horizontalement pour changer le temps. Rythme porte les attaques courtes ; Texture porte les couches soutenues. Les cinq canaux ont leur mixage et leurs effets.") ,
+            utf8("INICIO RÁPIDO\n\nElija el destino en Stem: Melodía, Armonía, Bajo, Ritmo o Textura. Escriba o dibuje, nombre la célula, pulse Guardar célula y haga clic en una fila de la cuadrícula. Arrastre verticalmente para cambiar de canal y horizontalmente para cambiar el tiempo. Ritmo lleva ataques cortos; Textura lleva capas sostenidas. Los cinco canales tienen su propia mezcla y efectos.")
         };
         juce::String text = topic == 1 ? tutorial[language] : copy[topic][language];
         if (topic == 2) {
@@ -354,10 +389,10 @@ private:
             };
             text += "\n\n" + utf8(nativeTips[language]);
             const char* meterTips[] = {
-                "FORMA E POLIMETRIA — Em V6–V9, Variar frase → Editar seção escolhe o compasso e 1–4 compassos de duração. O motivo é estendido no tempo, sem criar ataques ocultos; ×2, por exemplo, ocupa dois compassos. Restaurar seção volta a 1× e ao compasso da música. No seletor 4/4, abra Stem 1–3 para dar a cada pista um ciclo 2/4–7/4 ou 6/8. Traços âmbar aparecem somente naquela pista sobre a régua geral; o BPM e as posições continuam em semínimas comuns. Assim 3/4 contra 5/4 reencontra o início a cada 15 tempos. Guardar/Atualizar e o projeto V61 preservam tudo.",
-                "FORM AND POLYMETER — In V6–V9, Variar frase → Editar seção selects both meter and a 1–4 bar duration. The motif is stretched in time without hidden attacks; ×2 occupies two bars. Restore returns to 1× and the song meter. In the 4/4 selector, open Stem 1–3 to assign each lane a 2/4–7/4 or 6/8 cycle. Amber marks appear only in that lane over the shared ruler; BPM and positions remain common quarter-note units. Thus 3/4 against 5/4 meets again every 15 beats. Save/update and V61 projects retain all settings.",
-                "FORME ET POLYMÉTRIE — En V6–V9, Variar frase → Editar seção choisit la mesure et une durée de 1–4 mesures. Le motif est étiré sans attaques cachées ; ×2 occupe deux mesures. Restaurer revient à 1× et à la mesure du morceau. Dans le sélecteur 4/4, ouvrez Stem 1–3 pour attribuer un cycle 2/4–7/4 ou 6/8. Les repères ambre n’apparaissent que sur cette piste, au-dessus de la règle commune ; BPM et positions restent en noires communes. Ainsi 3/4 contre 5/4 se rejoint tous les 15 temps. Sauvegarde/mise à jour et V61 conservent ces choix.",
-                "FORMA Y POLIMETRÍA — En V6–V9, Variar frase → Editar seção elige compás y una duración de 1–4 compases. El motivo se estira sin ataques ocultos; ×2 ocupa dos compases. Restaurar vuelve a 1× y al compás de la música. En el selector 4/4, abra Stem 1–3 para asignar a cada pista un ciclo 2/4–7/4 o 6/8. Las marcas ámbar aparecen solo en esa pista sobre la regla común; BPM y posiciones siguen en negras comunes. Así 3/4 contra 5/4 coincide cada 15 tiempos. Guardar/Actualizar y V61 conservan todo."
+                "FORMA E POLIMETRIA — Em V6–V9, Variar frase → Editar seção escolhe o compasso e 1–4 compassos de duração. O motivo é estendido no tempo; ×2 ocupa dois compassos. No seletor 4/4, abra Stem 1–5 para dar a cada canal um ciclo 2/4–7/4 ou 6/8. Traços âmbar aparecem naquele canal; as posições continuam em semínimas comuns.",
+                "FORM AND POLYMETER — In V6–V9, Variar frase → Editar seção sets meter and a 1–4 bar duration. The motif stretches; ×2 occupies two bars. In the 4/4 selector, open Stem 1–5 to assign each channel a 2/4–7/4 or 6/8 cycle. Amber marks appear in that channel; positions remain common quarter-note units.",
+                "FORME ET POLYMÉTRIE — En V6–V9, Variar frase → Editar seção règle la mesure et une durée de 1–4 mesures. Le motif s’étire ; ×2 occupe deux mesures. Dans le sélecteur 4/4, ouvrez Stem 1–5 pour attribuer un cycle 2/4–7/4 ou 6/8. Les repères ambre apparaissent sur ce canal ; les positions restent en noires communes.",
+                "FORMA Y POLIMETRÍA — En V6–V9, Variar frase → Editar seção elige compás y una duración de 1–4 compases. El motivo se estira; ×2 ocupa dos compases. En el selector 4/4, abra Stem 1–5 para asignar un ciclo 2/4–7/4 o 6/8. Las marcas ámbar aparecen en ese canal; las posiciones siguen en negras comunes."
             };
             text += "\n\n" + utf8(meterTips[language]);
             const char* responseMeterTips[] = {
@@ -480,10 +515,10 @@ private:
             };
             text += "\n\n" + utf8(loudnessTips[language]);
             const char* takeTips[] = {
-                "TAKES — Em Variar frase, Guardar prévia como novo take conserva seed, variação, versão, seções, compassos e edições numa célula independente. Ouvir e preferir take desta seed lista frases guardadas com a mesma seed, incluindo o original. Guarde a prévia antes de trocar; a troca descarta edições ainda não guardadas. A preferência volta ao abrir o projeto salvo, sem iniciar áudio; a grade mantém suas células. Para usar o take na composição, insira sua célula na grade. O limite é o banco de 64 células.",
-                "TAKES — In Variar frase, Guardar prévia como novo take stores seed, variation, version, sections, meters and edits as an independent cell. Ouvir e preferir take desta seed lists saved phrases sharing the seed, including the original. Save the preview before switching; unsaved edits are discarded by a switch. The preference returns when opening the saved project, without starting audio; grid cells stay unchanged. Place the chosen cell to use it in the composition. The bank limit is 64 cells.",
-                "PRISES — Dans Variar frase, Guardar prévia como novo take conserve graine, variation, version, sections, mesures et éditions dans une cellule indépendante. Ouvir e preferir take desta seed liste les phrases conservées de même graine, dont l’original. Conservez la préécoute avant de changer ; les éditions non conservées sont abandonnées. Le choix revient à l’ouverture du projet enregistré, sans lancer le son ; la grille est préservée. Insérez la cellule choisie pour l’utiliser dans la composition. Limite : 64 cellules.",
-                "TOMAS — En Variar frase, Guardar prévia como novo take conserva semilla, variación, versión, secciones, compases y ediciones en una célula independiente. Ouvir e preferir take desta seed lista frases guardadas con la misma semilla, incluido el original. Guarde la previa antes de cambiar; al cambiar se descartan ediciones sin guardar. La preferencia vuelve al abrir el proyecto guardado, sin iniciar audio; la cuadrícula se conserva. Inserte la célula elegida para usarla en la composición. Límite: 64 células."
+                "TAKES — Em Variar frase, Guardar prévia como novo take conserva seed, variação, versão, seções, compassos e edições numa célula independente. Ouvir e preferir take desta seed lista frases guardadas com a mesma seed, incluindo o original. Guarde a prévia antes de trocar; a troca descarta edições ainda não guardadas. A preferência volta ao abrir o projeto salvo, sem iniciar áudio; a grade mantém suas células. Para usar o take na composição, insira sua célula na grade. O banco aceita 128 células.",
+                "TAKES — In Variar frase, Guardar prévia como novo take stores seed, variation, version, sections, meters and edits as an independent cell. Ouvir e preferir take desta seed lists saved phrases sharing the seed, including the original. Save the preview before switching; unsaved edits are discarded by a switch. The preference returns when opening the saved project, without starting audio; grid cells stay unchanged. Place the chosen cell to use it in the composition. The bank limit is 128 cells.",
+                "PRISES — Dans Variar frase, Guardar prévia como novo take conserve graine, variation, version, sections, mesures et éditions dans une cellule indépendante. Ouvir e preferir take desta seed liste les phrases conservées de même graine, dont l’original. Conservez la préécoute avant de changer ; les éditions non conservées sont abandonnées. La grille accepte 128 cellules.",
+                "TOMAS — En Variar frase, Guardar prévia como novo take conserva semilla, variación, versión, secciones, compases y ediciones en una célula independiente. Ouvir e preferir take desta seed lista frases guardadas con la misma semilla, incluido el original. Guarde la previa antes de cambiar; al cambiar se descartan ediciones sin guardar. La cuadrícula acepta 128 células."
             };
             text += "\n\n" + utf8(takeTips[language]);
             const char* gapTips[] = {
@@ -515,17 +550,17 @@ private:
             };
             text += "\n\n" + utf8(compositionSeedTips[language]);
             static const char* seedTrackTips[4] = {
-                "FAIXA COMPLETA POR SEED — Em Salvar → Gerar faixa completa por seed, informe uma seed. Revise andamento, duração estrutural e distribuição de melodia, harmonia e baixo; escolha um novo arquivo .risco para salvar. A faixa gerada só substitui a composição aberta depois de gravar e reabrir o novo projeto. Cancelar ou falhar ao salvar preserva a música atual.",
-                "FULL TRACK FROM SEED — In Save → Gerar faixa completa por seed, enter a seed. Review tempo, structural length and the melody, harmony and bass stems; choose a new .risco file. The generated track replaces the open composition only after it is saved and reopened. Canceling or a save failure preserves the current song.",
-                "MORCEAU COMPLET PAR SEED — Dans Salvar → Gerar faixa completa por seed, saisissez une seed. Vérifiez le tempo, la durée structurelle et les pistes mélodie, harmonie et basse ; choisissez un nouveau fichier .risco. Le morceau généré ne remplace la composition ouverte qu’après son enregistrement et sa réouverture. Annuler ou échouer à l’enregistrement préserve le morceau actuel.",
-                "PIEZA COMPLETA POR SEED — En Salvar → Gerar faixa completa por seed, introduzca una seed. Revise el tempo, la duración estructural y las pistas de melodía, armonía y bajo; elija un archivo .risco nuevo. La pieza generada solo sustituye la composición abierta después de guardarla y volver a abrirla. Cancelar o fallar al guardar conserva la canción actual."
+                "FAIXA COMPLETA POR SEED — Em Salvar → Gerar faixa completa por seed, informe uma seed. Revise andamento, duração e os canais melodia, harmonia, baixo, ritmo e textura; escolha um novo arquivo .risco. A faixa só substitui a composição aberta depois de salvar e reabrir o projeto.",
+                "FULL TRACK FROM SEED — In Save → Gerar faixa completa por seed, enter a seed. Review tempo, duration and the melody, harmony, bass, rhythm and texture channels; choose a new .risco file. The track replaces the open composition only after saving and reopening the project.",
+                "MORCEAU COMPLET PAR SEED — Dans Salvar → Gerar faixa completa par seed, saisissez une seed. Vérifiez le tempo, la durée et les canaux mélodie, harmonie, basse, rythme et texture ; choisissez un nouveau fichier .risco.",
+                "PIEZA COMPLETA POR SEED — En Salvar → Gerar faixa completa por seed, introduzca una seed. Revise el tempo, la duración y los canales de melodía, armonía, bajo, ritmo y textura; elija un archivo .risco nuevo."
             };
             text += "\n\n" + utf8(seedTrackTips[language]);
             static const char* albumTips[4] = {
-                "MODO ÁLBUM — Em Salvar → Gerar projetos de álbum, defina título, seed-mãe, quantidade, BPM central, amplitude e contorno. Revise o plano e escolha a pasta-pai; os projetos .risco independentes são criados em sequência com checkpoint atômico em album.risco-manifest. Depois, Salvar → Renderizar WAV do álbum cria WAV PCM24/48 kHz com MASTER e mede LUFS/true peak no manifesto. Para retomar qualquer fila, selecione a mesma pasta. Os trabalhos são sequenciais, canceláveis entre faixas e retomáveis; o render reserva 5 GB além do espaço estimado. A audição autoral e a masterização de álbum permanecem pendentes.",
-                "ALBUM MODE — In Save → Gerar projetos de álbum, set the title, master seed, track count, center BPM, spread and contour. Review the plan and choose a parent folder; independent .risco projects are created sequentially with atomic checkpoints in album.risco-manifest. Then Save → Renderizar WAV do álbum creates PCM24/48 kHz WAVs with MASTER and records LUFS/true peak in the manifest. To resume either queue, select the same folder. Jobs are sequential, cancelable between tracks and resumable; the render reserves 5 GB beyond estimated space. Authorial listening and album mastering remain pending.",
-                "MODE ALBUM — Dans Salvar → Gerar projetos de álbum, définissez le titre, la seed mère, le nombre de pistes, le BPM central, l’amplitude et le contour. Vérifiez le plan et choisissez le dossier parent ; les projets .risco indépendants sont créés en séquence avec checkpoints atomiques dans album.risco-manifest. Ensuite, Salvar → Renderizar WAV do álbum crée des WAV PCM24/48 kHz avec MASTER et inscrit LUFS/true peak dans le manifeste. Pour reprendre une file, choisissez le même dossier. Les tâches sont séquentielles, annulables entre pistes et reprenables ; le rendu réserve 5 Go au-delà de l’espace estimé. L’écoute d’auteur et le mastering d’album restent à faire.",
-                "MODO ÁLBUM — En Salvar → Gerar projetos de álbum, defina título, seed madre, cantidad, BPM central, amplitud y contorno. Revise el plan y elija la carpeta padre; los proyectos .risco independientes se crean en secuencia con checkpoints atómicos en album.risco-manifest. Luego, Salvar → Renderizar WAV do álbum crea WAV PCM24/48 kHz con MASTER y registra LUFS/true peak en el manifiesto. Para reanudar una cola, elija la misma carpeta. Los trabajos son secuenciales, cancelables entre pistas y reanudables; el render reserva 5 GB además del espacio estimado. La escucha autoral y la masterización del álbum siguen pendientes."
+                "MODO ÁLBUM — Em Salvar → Gerar projetos de álbum, defina título, seed-mãe, quantidade, BPM central, amplitude e contorno. Opcionalmente, informe perfis por faixa em sequência desde a faixa 1: O (original), R (parentesco), C (contraste), - (perfil geral). Revise o plano e escolha a pasta-pai; os projetos .risco independentes são criados em sequência com checkpoint atômico em album.risco-manifest. Depois, Salvar → Renderizar WAV do álbum cria WAV PCM24/48 kHz com MASTER e mede LUFS/true peak no manifesto. Para retomar qualquer fila, selecione a mesma pasta. Os trabalhos são sequenciais, canceláveis entre faixas e retomáveis; o render reserva 5 GB além do espaço estimado. A audição autoral e a masterização de álbum permanecem pendentes.",
+                "ALBUM MODE — In Save → Gerar projetos de álbum, set the title, master seed, track count, center BPM, spread and contour. Optionally enter per-track profiles as a sequence starting at track 1: O (original), R (related), C (contrasting), - (album default). Review the plan and choose a parent folder; independent .risco projects are created sequentially with atomic checkpoints in album.risco-manifest. Then Save → Renderizar WAV do álbum creates PCM24/48 kHz WAVs with MASTER and records LUFS/true peak in the manifest. To resume either queue, select the same folder. Jobs are sequential, cancelable between tracks and resumable; the render reserves 5 GB beyond estimated space. Authorial listening and album mastering remain pending.",
+                "MODE ALBUM — Dans Salvar → Gerar projetos de álbum, définissez le titre, la seed mère, le nombre de pistes, le BPM central, l’amplitude et le contour. Facultativement, saisissez les profils par piste dans une séquence à partir de la piste 1 : O (original), R (parenté), C (contraste), - (profil général). Vérifiez le plan et choisissez le dossier parent ; les projets .risco indépendants sont créés en séquence avec checkpoints atomiques dans album.risco-manifest. Ensuite, Salvar → Renderizar WAV do álbum crée des WAV PCM24/48 kHz avec MASTER et inscrit LUFS/true peak dans le manifeste. Pour reprendre une file, choisissez le même dossier. Les tâches sont séquentielles, annulables entre pistes et reprenables ; le rendu réserve 5 Go au-delà de l’espace estimé. L’écoute d’auteur et le mastering d’album restent à faire.",
+                "MODO ÁLBUM — En Salvar → Gerar projetos de álbum, defina título, seed madre, cantidad, BPM central, amplitud y contorno. Opcionalmente, escriba perfiles por pieza en secuencia desde la pieza 1: O (original), R (afinidad), C (contraste), - (perfil general). Revise el plan y elija la carpeta padre; los proyectos .risco independientes se crean en secuencia con checkpoints atómicos en album.risco-manifest. Luego, Salvar → Renderizar WAV do álbum crea WAV PCM24/48 kHz con MASTER y registra LUFS/true peak en el manifiesto. Para reanudar una cola, elija la misma carpeta. Los trabajos son secuenciales, cancelables entre pistas y reanudables; el render reserva 5 GB además del espacio estimado. La escucha autoral y la masterización del álbum siguen pendientes."
             };
             text += "\n\n" + utf8(albumTips[language]);
             static const juce::String glitchTips[4] = {
@@ -567,6 +602,8 @@ public:
         stemSelect.addItem("Stem 1", 1);
         stemSelect.addItem("Stem 2", 2);
         stemSelect.addItem("Stem 3", 3);
+        stemSelect.addItem(utf8("Stem 4 · Ritmo"), 4);
+        stemSelect.addItem(utf8("Stem 5 · Textura"), 5);
         stemSelect.setSelectedId(1, juce::dontSendNotification);
         stemSelect.onChange = [this] {
             if (onStemChanged) onStemChanged(stemSelect.getSelectedId() - 1);
@@ -871,6 +908,18 @@ private:
     int grabbedPoint = -1;
 };
 
+class AutoSettingsButton final : public juce::TextButton {
+public:
+    std::function<void()> onContextMenu;
+    void mouseDown(const juce::MouseEvent& event) override {
+        if (event.mods.isRightButtonDown()) {
+            if (onContextMenu) onContextMenu();
+            return;
+        }
+        juce::TextButton::mouseDown(event);
+    }
+};
+
 class MainComponent final : public juce::AudioAppComponent, private juce::Timer {
 public:
     using GridState = RecoveryGridState;
@@ -891,12 +940,12 @@ public:
         ascii.setVisible(false);
         ascii.setMultiLine(true);
         ascii.setReturnKeyStartsNewLine(true);
-        ascii.setTextToShowWhenEmpty(utf8("Digite o texto aqui — acentos e pontuação são lidos"), juce::Colours::grey);
+        ascii.setTextToShowWhenEmpty(utf8("Digite aqui — o som acompanha o texto"), juce::Colours::grey);
         ascii.setInputRestrictions(4096);
         ascii.onTextChange = [this] {
             currentPhraseGenerated = false;
             marqueeScrollStartMillis = juce::Time::getMillisecondCounter();
-            updateLiveDrawing(true);
+            updateLiveDrawing(false);
         };
         ascii.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff0c1728));
         ascii.setColour(juce::TextEditor::textColourId, juce::Colour(0xffe0f6ff));
@@ -953,6 +1002,7 @@ public:
         addAndMakeVisible(gestureEditor);
         gestureEditor.setVisible(false);
         gestureEditor.onPointChanged = [this](int, float value) {
+            autoRouteButton.setToggleState(false, juce::dontSendNotification);
             inputGestureCurve.values[1] = std::clamp(value, 0.02f, 0.98f);
             inputGestureCurve.enabled = true;
             if (inputInterpretationChoice < 9 || inputInterpretationChoice > 13) inputInterpretationChoice = 8;
@@ -1136,7 +1186,7 @@ public:
             refreshPlaybackAfterGridEdit();
         };
         refreshMeterChoices();
-        meterSelect.setTooltip(utf8("Escolha o compasso de referência. Nos submenus Stem 1–3, cada pista pode herdar ou ter ciclo próprio; as linhas aparecem dentro da pista sem alterar o tempo comum em semínimas."));
+        meterSelect.setTooltip(utf8("Escolha o compasso de referência. Nos submenus Stem 1–5, cada canal pode herdar ou ter ciclo próprio; as linhas aparecem no canal sem alterar o tempo comum em semínimas."));
         meterSelect.onChange = [this] {
             const int choice = meterSelect.getSelectedId();
             if (choice >= 100) {
@@ -1641,6 +1691,8 @@ public:
         addAndMakeVisible(play);
         addAndMakeVisible(cross);
         addAndMakeVisible(clear);
+        addAndMakeVisible(undoDrawingButton);
+        addAndMakeVisible(redoDrawingButton);
         addAndMakeVisible(glyph);
         addAndMakeVisible(functionMode);
         addAndMakeVisible(loopMode);
@@ -1650,19 +1702,61 @@ public:
         addAndMakeVisible(storeCellButton);
         addAndMakeVisible(bankSelect);
         addAndMakeVisible(stemSelect);
+        addAndMakeVisible(autoRouteButton);
         addAndMakeVisible(roleSelect);
         bankSelect.setTooltip(utf8("Banco de células: escolha, busque por nome/fórmula/origem/ID, filtre favoritas ou consulte a proveniência no fim do menu. Ouvir célula faz a pré-escuta."));
         stemSelect.addItem("Stem 1", 1);
         stemSelect.addItem("Stem 2", 2);
         stemSelect.addItem("Stem 3", 3);
+        stemSelect.addItem(utf8("Stem 4 · Ritmo"), 4);
+        stemSelect.addItem(utf8("Stem 5 · Textura"), 5);
         stemSelect.addSeparator();
-        stemSelect.addItem(utf8("Sugerir posição"), 4);
-        stemSelect.addItem(utf8("Equilibrar som"), 5);
+        stemSelect.addItem(utf8("Sugerir posição"), 6);
+        stemSelect.addItem(utf8("Equilibrar som"), 7);
         stemSelect.setSelectedId(1, juce::dontSendNotification);
-        stemSelect.setTooltip(utf8("Stem 1–3: destino manual da próxima célula e de Auto/REC. Sugerir posição calcula tempo e stem pela grade e pelos papéis, sem inserir. Equilibrar som usa também densidade, atividade e RMS estimado para reduzir sobreposição sonora; pausas tendem a abrir espaço. Revise e clique Inserir célula."));
+        autoRouteButton.setButtonText(utf8("AUTO"));
+        autoRouteButton.setTooltip(utf8("Clique: ligar/desligar AUTO. Clique direito: ajustar a força e a frequência das derivações. AUTO distribui vozes nos stems; desligado, leitura/gesto e canal seguem escolhas manuais."));
+        autoRouteButton.setClickingTogglesState(true);
+        autoRouteButton.setToggleState(true, juce::dontSendNotification);
+        configureTogglePalette(autoRouteButton, juce::Colour(0xff354351), juce::Colour(0xff16776c));
+        autoRouteButton.onClick = [this] {
+            if (risco::validInscription(activeInput())) updateLiveDrawing(false);
+            status.setText(autoRouteButton.getToggleState()
+                ? utf8("AUTO ativo · novas derivações a cada volta; vozes nos stems correspondentes.")
+                : utf8("AUTO pausado · leitura, gesto e canal seguem suas escolhas manuais."),
+                juce::dontSendNotification);
+        };
+        autoRouteButton.onContextMenu = [this] {
+            juce::PopupMenu strength, pace, menu;
+            strength.addItem(101, utf8("Suave · 40%"), true, autoEvolutionStrength == 1);
+            strength.addItem(102, utf8("Equilibrada · 70%"), true, autoEvolutionStrength == 2);
+            strength.addItem(103, utf8("Intensa · 100%"), true, autoEvolutionStrength == 3);
+            pace.addItem(201, utf8("A cada volta"), true, autoEvolutionEveryLoops == 1);
+            pace.addItem(202, utf8("A cada 2 voltas"), true, autoEvolutionEveryLoops == 2);
+            pace.addItem(204, utf8("A cada 4 voltas"), true, autoEvolutionEveryLoops == 4);
+            menu.addSubMenu(utf8("Força da evolução"), strength);
+            menu.addSubMenu(utf8("Frequência"), pace);
+            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&autoRouteButton),
+                [this](int choice) {
+                    if (choice >= 101 && choice <= 103) {
+                        autoEvolutionStrength = choice - 100;
+                        if (risco::validInscription(activeInput())) updateLiveDrawing(false);
+                        const char* names[] = {"", "suave", "equilibrada", "intensa"};
+                        status.setText(utf8("AUTO · força ") + utf8(names[autoEvolutionStrength]) + utf8(".") ,
+                                       juce::dontSendNotification);
+                    } else if (choice == 201 || choice == 202 || choice == 204) {
+                        autoEvolutionEveryLoops = choice - 200;
+                        status.setText(utf8("AUTO · nova derivação a cada ") +
+                            juce::String(autoEvolutionEveryLoops) +
+                            (autoEvolutionEveryLoops == 1 ? utf8(" volta.") : utf8(" voltas.")),
+                            juce::dontSendNotification);
+                    }
+                });
+        };
+        stemSelect.setTooltip(utf8("Escolha o canal de destino da próxima célula e de Auto/REC. Sugerir posição calcula tempo e canal pela grade e pelos papéis, sem inserir. Equilibrar som considera também densidade e atividade. Revise e clique Inserir célula."));
         stemSelect.onChange = [this] {
-            if (stemSelect.getSelectedId() == 4 || stemSelect.getSelectedId() == 5) {
-                const bool balanceSound = stemSelect.getSelectedId() == 5;
+            if (stemSelect.getSelectedId() == 6 || stemSelect.getSelectedId() == 7) {
+                const bool balanceSound = stemSelect.getSelectedId() == 7;
                 const int index = selectedCellIndex();
                 const auto span = cellSpan.getSelectedId() == 1 ? risco::CellSpan::beat :
                                   cellSpan.getSelectedId() == 4 ? risco::CellSpan::twoBars :
@@ -1721,9 +1815,13 @@ public:
                 return;
             }
             pendingStem = stemSelect.getSelectedId() - 1;
-            if (pendingStem >= 0 && pendingStem < risco::Song::stemCount)
+            if (pendingStem >= 0 && pendingStem < risco::Song::stemCount) {
+                autoRouteButton.setToggleState(false, juce::dontSendNotification);
+                if (liveInputPlayback.load(std::memory_order_acquire) != nullptr)
+                    updateLiveDrawing(false);
                 status.setText(utf8("Destino da próxima célula: STEM ") + juce::String(pendingStem + 1) +
                     utf8(". Auto: frases e REC seguem esta escolha."), juce::dontSendNotification);
+            }
         };
         roleSelect.addItem("P: livre", 1);
         roleSelect.addItem("P: pulso", 2);
@@ -1795,18 +1893,21 @@ public:
             const bool busy = (albumJob && albumJob->isThreadRunning()) ||
                               (albumRenderJob && albumRenderJob->isThreadRunning());
             juce::PopupMenu menu;
-            menu.addItem(1, utf8("Planejar e gerar projetos…"), !busy);
-            menu.addItem(2, utf8("Renderizar WAVs…"), !busy);
+            menu.addItem(1, uiText("Planejar e gerar projetos…", "Plan and generate projects…", "Planifier et générer les projets…", "Planificar y generar proyectos…"), !busy);
+            menu.addItem(3, uiText("Retomar projetos…", "Resume projects…", "Reprendre les projets…", "Reanudar proyectos…"), !busy);
+            menu.addItem(2, uiText("Renderizar WAVs…", "Render WAVs…", "Rendre les WAV…", "Renderizar WAV…"), !busy);
             juce::Component::SafePointer<MainComponent> safeThis(this);
             menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&albumMenuButton),
                 [safeThis](int choice) {
                     if (!safeThis) return;
                     if (choice == 1) safeThis->openAlbumDialog();
-                    if (choice == 2) safeThis->openAlbumRenderChooser();
+                    if (choice == 2) safeThis->openAlbumFolderChooser();
+                    if (choice == 3) safeThis->openAlbumFolderChooser(true);
                 });
         };
         play.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b8b79));
-        play.setTooltip(utf8("Ouve o texto ou desenho atual ao vivo, fora da grade da música."));
+        play.setTooltip(utf8("Recomeça a escuta ao vivo. AUTO distribui as vozes pelos stems; desligado, usa o canal escolhido."));
+        cross.setTooltip(utf8("Silencia/reabilita o último traço; ele continua visível e pode ser desfeito."));
         functionMode.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff65529a));
         functionMode.setTooltip(utf8("Ativa a fórmula de onda bytebeat aplicada abaixo."));
         loopMode.setClickingTogglesState(true);
@@ -1815,7 +1916,7 @@ public:
         storeCellButton.setTooltip(utf8("Guarda no banco desta música. Use Salvar para conservar a performance ao fechar o app."));
         updateCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff496bb8));
         placeCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffa87526));
-        placeCellButton.setTooltip(utf8("Insere a célula selecionada no tempo indicado. Também é possível clicar num espaço vazio da grade."));
+        placeCellButton.setTooltip(uiText("Com AUTO ligado, escolhe tempo e canal compatíveis. Clique numa área vazia para dar uma referência temporal; o Risco decide pista e posição final. Desligue AUTO para inserir no tempo e STEM escolhidos.", "With AUTO on, chooses a matching time and lane. Click an empty area to set a timing reference; Risco decides the final lane and position. Turn AUTO off to place at the selected time and stem.", "Avec AUTO, choisit un temps et une piste compatibles. Cliquez dans une case vide pour donner un repère temporel ; Risco décide de la piste et position finales. Désactivez AUTO pour utiliser le temps et le Stem choisis.", "Con AUTO, elige tiempo y canal compatibles. Haga clic en un área vacía para dar una referencia temporal; Risco decide la pista y posición final. Desactive AUTO para insertar en el tiempo y Stem elegidos."));
         previewCellButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2b8b79));
         previewCellButton.setTooltip(utf8("Toca somente a célula escolhida no banco; se seu bloco está selecionado na grade, ouve o trecho recortado."));
         seedTrackButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffffc658));
@@ -2389,6 +2490,8 @@ public:
             menu.addSubMenu(utf8("Alcance de altura: ") + juce::String(inputGestureRangeSemitones) + utf8(" semitons"),rangeMenu);
             menu.addItem(200, utf8("Restaurar leitura completa · 100%"));
             menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&glyph), [this](int choice) {
+                if (choice != 0)
+                    autoRouteButton.setToggleState(false, juce::dontSendNotification);
                 if (choice == 1) { loadGlyph(); return; }
                 if (choice == 2) {
                     if (inputInterpretationChoice < 9 || inputInterpretationChoice > 13) inputInterpretationChoice = 8;
@@ -2481,9 +2584,10 @@ public:
         status.setColour(juce::Label::backgroundColourId, juce::Colour(0xff17283a));
         status.setColour(juce::Label::textColourId, juce::Colour(0xffe0f6ff));
         status.setBorderSize({0, 6, 0, 6});
-        status.setText(uiText("Faixa completa gera uma música. Ouvir texto/desenho toca o material da entrada.", "Full track generates a song. Play text/drawing plays your input.", "Morceau complet génère une pièce. Écouter texte/dessin joue votre entrée.", "Pieza completa genera una pieza. Oír texto/dibujo reproduce la entrada."),
+        status.setText(uiText("Escreva ou desenhe: o som acompanha a entrada. AUTO desenvolve cinco camadas.", "Type or draw: sound follows your input. AUTO develops five layers.", "Écrivez ou dessinez : le son suit votre geste. AUTO développe cinq couches.", "Escriba o dibuje: el sonido sigue la entrada. AUTO desarrolla cinco capas."),
                        juce::dontSendNotification);
         play.onClick = [this] { playInscription(); };
+        play.setTooltip(uiText("Recomeça a escuta ao vivo do texto ou desenho atual.", "Restart live listening for the current text or drawing.", "Relance l’écoute en direct du texte ou dessin actuel.", "Reinicia la escucha en vivo del texto o dibujo actual."));
         storeCellButton.onClick = [this] { storeCurrentCell(); };
         updateCellButton.setTooltip(utf8("Atualizar altera todas as ocorrências da célula. Abra para atualizar, desfazer ou refazer edições do banco (até 8 etapas nesta sessão)."));
         updateCellButton.onClick = [this] {
@@ -2593,6 +2697,7 @@ public:
             loopMode.setToggleState(false, juce::dontSendNotification);
             active.store(nullptr, std::memory_order_release);
             activeSong.store(nullptr, std::memory_order_release);
+            liveInputPlayback.store(nullptr, std::memory_order_release);
             status.setText(utf8("Reprodução parada."), juce::dontSendNotification);
         };
         saveButton.onClick = [this] {
@@ -2624,6 +2729,9 @@ public:
             menu.addItem(71, utf8("Comparar com a versão ativa"), activeCompositionVersion >= 0);
             menu.addItem(72, utf8("Gerar variação por seed…"), compositionVersions.size() < 16);
             menu.addItem(73, utf8("Gerar faixa completa por seed…"));
+            risco::SeedTrackOptions savedTrackOptions;
+            const bool editableSavedTrack = risco::seedTrackOptionsFromSong(song, savedTrackOptions);
+            menu.addItem(76, utf8("Reeditar partes da faixa salva…"), editableSavedTrack);
             const bool albumBusy = (albumJob && albumJob->isThreadRunning()) ||
                                    (albumRenderJob && albumRenderJob->isThreadRunning());
             menu.addItem(74, utf8("Gerar projetos de álbum…"), !albumBusy);
@@ -2640,7 +2748,7 @@ public:
             menu.addSubMenu(utf8("Saída WAV: ") + (exportPreMaster ? utf8("antes do MASTER") :
                 utf8("com MASTER")), processing);
             menu.addItem(2, utf8("Exportar áudio estéreo (.wav)"), !exportJob || !exportJob->isThreadRunning());
-            menu.addItem(6, utf8("Exportar os três stems (.wav)"), !exportJob || !exportJob->isThreadRunning());
+            menu.addItem(6, utf8("Exportar os cinco stems (.wav)"), !exportJob || !exportJob->isThreadRunning());
             menu.addItem(20, utf8("Reiniciar medidores/hold de saída · sem alterar o áudio"));
             for (int stem = 0; stem < risco::Song::stemCount; ++stem)
                 menu.addItem(3 + stem, utf8("Exportar Stem ") + juce::String(stem + 1) + " (.wav)",
@@ -2664,8 +2772,16 @@ public:
                     else if (choice == 71) compareCompositionVersion();
                     else if (choice == 72) openCompositionSeedDialog();
                     else if (choice == 73) openSeedTrackDialog();
+                    else if (choice == 76) {
+                        risco::SeedTrackOptions options;
+                        if (risco::seedTrackOptionsFromSong(song, options)) {
+                            SeedTrackProposal saved{std::make_shared<risco::Song>(song), options};
+                            openSeedTrackPartEditor(utf8("Faixa salva · revisar edição de partes"),
+                                                    std::move(saved), {}, 1);
+                        }
+                    }
                     else if (choice == 74) openAlbumDialog();
-                    else if (choice == 75) openAlbumRenderChooser();
+                    else if (choice == 75) openAlbumFolderChooser();
                     else if (choice >= 1000 && choice < 1016) restoreCompositionVersion(choice - 1000);
                     else if (choice >= 1100 && choice < 1116) deleteCompositionVersion(choice - 1100);
                     else if (choice == 20) {
@@ -2719,13 +2835,21 @@ public:
         };
         cross.onClick = [this] {
             if (inscription.count > 0) {
+                pushDrawingUndo();
                 auto& stroke = inscription.strokes[static_cast<size_t>(inscription.count - 1)];
                 stroke.crossed = !stroke.crossed;
                 updateLiveDrawing();
                 repaint();
             }
         };
+        undoDrawingButton.setTooltip(utf8("Desfaz a última edição do desenho; o botão ao lado refaz."));
+        undoDrawingButton.setEnabled(false);
+        undoDrawingButton.onClick = [this] { undoDrawingEdit(); };
+        redoDrawingButton.setTooltip(utf8("Refaz a última edição desfeita do desenho."));
+        redoDrawingButton.setEnabled(false);
+        redoDrawingButton.onClick = [this] { redoDrawingEdit(); };
         clear.onClick = [this] {
+            pushDrawingUndo();
             playing.store(false, std::memory_order_release);
             previewingCell = false;
             directEnabled.store(false, std::memory_order_release);
@@ -2733,6 +2857,7 @@ public:
             autoMode.setToggleState(false, juce::dontSendNotification);
             active.store(nullptr, std::memory_order_release);
             activeSong.store(nullptr, std::memory_order_release);
+            liveInputPlayback.store(nullptr, std::memory_order_release);
             inscription = {};
             ascii.clear();
             marqueeScrollStartMillis = juce::Time::getMillisecondCounter();
@@ -2781,6 +2906,7 @@ public:
     void releaseResources() override {}
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& info) override {
+        AudioReadGuard audioRead(audioReaders);
         juce::ScopedNoDenormals noDenormals;
         if (resetOutputLoudness.exchange(false, std::memory_order_acq_rel)) outputStage.resetReadouts();
         info.clearActiveBufferRegion();
@@ -2825,10 +2951,11 @@ public:
         }
         const auto* sequence = active.load(std::memory_order_acquire);
         const auto* arrangement = activeSong.load(std::memory_order_acquire);
+        const auto* liveArrangement = liveInputPlayback.load(std::memory_order_acquire);
         const auto* formula = activeFormula.load(std::memory_order_acquire);
         const bool direct = directEnabled.load(std::memory_order_acquire);
         if (!playing.load(std::memory_order_acquire) ||
-            (!direct && sequence == nullptr && arrangement == nullptr)) {
+            (!direct && sequence == nullptr && arrangement == nullptr && liveArrangement == nullptr)) {
             for (int i = 0; i < info.numSamples; ++i) writeOutput(i, 0.0f, 0.0f, 0.0f);
             publishedScopeWriteIndex.store(scopeWriteIndex, std::memory_order_release);
             publishOutputMeter(outputStage.takeMeterWindow());
@@ -2864,6 +2991,7 @@ public:
             for (auto& automation : stemAutoProcessors) automation.reset();
             for (auto& automation : stemPanAutoProcessors) automation.reset();
             for (auto& engine : historicalStemEngines) engine.reset();
+            for (auto& engine : liveHistoricalStemEngines) engine.reset();
             historicalPreviewEngine.reset();
         }
         double displayedTime = playheadSeconds.load(std::memory_order_relaxed);
@@ -2873,18 +3001,20 @@ public:
         std::array<risco::ParameterAutomation, risco::Song::stemCount> filterCurves;
         std::array<risco::ParameterAutomation, risco::Song::stemCount> delayMixCurves, delayFeedbackCurves, reverbMixCurves, reverbDecayCurves;
         std::array<risco::ParameterAutomation, risco::Song::stemCount> bitcrushCurves;
+        const bool applyAutomation = arrangement != nullptr ? arrangement->applyStemAutomation
+            : liveArrangement != nullptr && liveArrangement->applyStemAutomation;
         for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
             const auto index = static_cast<size_t>(stem);
-            autoCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemAutoState[index].enabled.load(std::memory_order_acquire);
+            autoCurves[index].enabled = applyAutomation && stemAutoState[index].enabled.load(std::memory_order_acquire);
             for (size_t p = 0; p < 3; ++p) autoCurves[index].levels[p] = stemAutoState[index].levels[p].load(std::memory_order_relaxed);
-            panCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemPanAutoState[index].enabled.load(std::memory_order_acquire);
-            fxCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemFxAutoState[index].enabled.load(std::memory_order_acquire);
-            filterCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemFilterAutoState[index].enabled.load(std::memory_order_acquire);
-            delayMixCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemDelayAutoState[index].mixEnabled.load(std::memory_order_acquire);
-            delayFeedbackCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemDelayAutoState[index].feedbackEnabled.load(std::memory_order_acquire);
-            reverbMixCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemReverbAutoState[index].enabled.load(std::memory_order_acquire);
-            reverbDecayCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemReverbAutoState[index].decayEnabled.load(std::memory_order_acquire);
-            bitcrushCurves[index].enabled = arrangement != nullptr && arrangement->applyStemAutomation && stemBitcrushAutoState[index].enabled.load(std::memory_order_acquire);
+            panCurves[index].enabled = applyAutomation && stemPanAutoState[index].enabled.load(std::memory_order_acquire);
+            fxCurves[index].enabled = applyAutomation && stemFxAutoState[index].enabled.load(std::memory_order_acquire);
+            filterCurves[index].enabled = applyAutomation && stemFilterAutoState[index].enabled.load(std::memory_order_acquire);
+            delayMixCurves[index].enabled = applyAutomation && stemDelayAutoState[index].mixEnabled.load(std::memory_order_acquire);
+            delayFeedbackCurves[index].enabled = applyAutomation && stemDelayAutoState[index].feedbackEnabled.load(std::memory_order_acquire);
+            reverbMixCurves[index].enabled = applyAutomation && stemReverbAutoState[index].enabled.load(std::memory_order_acquire);
+            reverbDecayCurves[index].enabled = applyAutomation && stemReverbAutoState[index].decayEnabled.load(std::memory_order_acquire);
+            bitcrushCurves[index].enabled = applyAutomation && stemBitcrushAutoState[index].enabled.load(std::memory_order_acquire);
             for (size_t p = 0; p < 3; ++p) {
                 panCurves[index].levels[p] = stemPanAutoState[index].levels[p].load(std::memory_order_relaxed);
                 fxCurves[index].active[p] = stemFxAutoState[index].active[p].load(std::memory_order_relaxed);
@@ -2901,20 +3031,23 @@ public:
         }
         for (int i = 0; i < info.numSamples; ++i) {
             const double absoluteTime = double(sampleIndex++) / sampleRate;
-            const double duration = arrangement != nullptr ? arrangement->end : sequence->end;
+            const double duration = arrangement != nullptr ? arrangement->end
+                : liveArrangement != nullptr ? liveArrangement->end : sequence->end;
+            const double playbackDuration = arrangement == nullptr && liveArrangement != nullptr && sequence != nullptr
+                ? std::max(duration, sequence->end) : duration;
             const bool loopRange = arrangement != nullptr &&
                 loopRangeEnabled.load(std::memory_order_acquire);
             const double rangeStart = loopRangeStartSeconds.load(std::memory_order_relaxed);
             const double rangeEnd = loopRangeEndSeconds.load(std::memory_order_relaxed);
             const double rangeLength = rangeEnd - rangeStart;
             const bool validLoopRange = loopRange && rangeStart >= 0.0 && rangeLength > 0.0 &&
-                                        rangeStart < duration;
+                                        rangeStart < playbackDuration;
             const bool loop = validLoopRange || loopEnabled.load(std::memory_order_relaxed);
             const double t = validLoopRange
                 ? rangeStart + std::fmod(absoluteTime, rangeLength)
-                : loop && duration > 0.0 ? std::fmod(absoluteTime, duration) : absoluteTime;
+                : loop && playbackDuration > 0.0 ? std::fmod(absoluteTime, playbackDuration) : absoluteTime;
             displayedTime = t;
-            if (!loop && t >= duration) {
+            if (!loop && t >= playbackDuration) {
                 playing.store(false, std::memory_order_release);
                 for (; i < info.numSamples; ++i) writeOutput(i, 0.0f, 0.0f, 0.0f);
                 break;
@@ -2924,6 +3057,7 @@ public:
             if (historical && historicalPreparedTimbre != timbre) {
                 const auto model = risco::historicalAyModel(timbre);
                 for (auto& engine : historicalStemEngines) engine.prepare(model, sampleRate);
+                for (auto& engine : liveHistoricalStemEngines) engine.prepare(model, sampleRate);
                 historicalPreviewEngine.prepare(model, sampleRate);
                 historicalPreparedTimbre = timbre;
             } else if (!historical) historicalPreparedTimbre = 0;
@@ -2933,7 +3067,7 @@ public:
                 renderingHistoricalAyEnvelope.load(std::memory_order_relaxed),
                 renderingHistoricalAyEnvelopeRamp.load(std::memory_order_relaxed)};
             const auto mode = timbre > 0 ? risco::noteWaveMode(timbre) : useFormula ? risco::WaveMode::phaseFunction : risco::WaveMode::quantizedSine;
-            if (arrangement != nullptr) {
+            if (arrangement != nullptr || liveArrangement != nullptr) {
                 float left = 0.0f;
                 float right = 0.0f;
                 for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
@@ -2958,14 +3092,33 @@ public:
                         stemEffects[index].setBitcrushBits(risco::automationBitcrushBitsAt(bitcrushCurves[index], t, duration,
                             stemBitcrushBitsValue[index].load(std::memory_order_relaxed)));
                     float source = 0.0f;
+                    const double liveTime = liveArrangement != nullptr && liveArrangement->end > 0.0
+                        ? std::fmod(absoluteTime, liveArrangement->end) : t;
                     if (historical) {
-                        const auto chip = historicalStemEngines[index].processStem(*arrangement, t, stem,
-                            historicalSettings);
-                        source = (chip.left + chip.right) * 0.5f +
-                            risco::songStemDirectFormulaSampleAt(*arrangement, t, stem, absoluteTime);
-                    } else source = risco::songStemSampleAt(*arrangement, t, stem, mode,
-                        formula, absoluteTime, renderingAyNoisePeriod.load(std::memory_order_relaxed),
-                        renderingAyEnvelopeMode.load(std::memory_order_relaxed), renderingAyEnvelopeRamp.load(std::memory_order_relaxed));
+                        if (arrangement != nullptr) {
+                            const auto chip = historicalStemEngines[index].processStem(*arrangement, t, stem,
+                                historicalSettings);
+                            source += (chip.left + chip.right) * 0.5f +
+                                risco::songStemDirectFormulaSampleAt(*arrangement, t, stem, absoluteTime);
+                        }
+                        if (liveArrangement != nullptr) {
+                            const auto chip = liveHistoricalStemEngines[index].processStem(*liveArrangement, liveTime,
+                                stem, historicalSettings);
+                            source += (chip.left + chip.right) * 0.5f +
+                                risco::songStemDirectFormulaSampleAt(*liveArrangement, liveTime, stem, absoluteTime);
+                        }
+                    } else {
+                        if (arrangement != nullptr)
+                            source += risco::songStemSampleAt(*arrangement, t, stem, mode, formula, absoluteTime,
+                                renderingAyNoisePeriod.load(std::memory_order_relaxed),
+                                renderingAyEnvelopeMode.load(std::memory_order_relaxed),
+                                renderingAyEnvelopeRamp.load(std::memory_order_relaxed));
+                        if (liveArrangement != nullptr)
+                            source += risco::songStemSampleAt(*liveArrangement, liveTime, stem, mode, formula,
+                                absoluteTime, renderingAyNoisePeriod.load(std::memory_order_relaxed),
+                                renderingAyEnvelopeMode.load(std::memory_order_relaxed),
+                                renderingAyEnvelopeRamp.load(std::memory_order_relaxed));
+                    }
                     const float raw = stemEffects[index].process(source *
                         stemAutoProcessors[index].process(autoCurves[index], t, duration));
                     if (muted || soloExcluded) continue;
@@ -2975,6 +3128,19 @@ public:
                     const float angle = (pan+1.0f)*0.78539816339f;
                     left += raw*level*std::cos(angle);
                     right += raw*level*std::sin(angle);
+                }
+                if (sequence != nullptr) {
+                    float rawSequence = 0.0f;
+                    if (historical) {
+                        const auto chip = historicalPreviewEngine.process(*sequence, t, historicalSettings);
+                        rawSequence = (chip.left + chip.right) * 0.5f;
+                    } else rawSequence = risco::sampleAt(*sequence, t, mode, formula,
+                        renderingBits.load(std::memory_order_relaxed),
+                        renderingAyNoisePeriod.load(std::memory_order_relaxed),
+                        renderingAyEnvelopeMode.load(std::memory_order_relaxed),
+                        renderingAyEnvelopeRamp.load(std::memory_order_relaxed));
+                    left += rawSequence;
+                    right += rawSequence;
                 }
                 const int shape = renderingShape.load(std::memory_order_relaxed);
                 if (shape != 0) {
@@ -3214,30 +3380,34 @@ public:
             place(masterSlider, 312, 3, 200, 26);
         }
         place(ledSourceButton, 20, liveY, 145, controlHeight);
-        place(play, 175, liveY, 190, controlHeight);
-        place(cross, 375, liveY, 125, controlHeight);
-        place(clear, 510, liveY, 90, controlHeight);
-        place(glyph, 610, liveY, 175, controlHeight);
+        place(play, 175, liveY, 160, controlHeight);
+        place(cross, 345, liveY, 98, controlHeight);
+        place(clear, 450, liveY, 65, controlHeight);
+        place(undoDrawingButton, 520, liveY, 60, controlHeight);
+        place(redoDrawingButton, 585, liveY, 60, controlHeight);
+        place(glyph, 650, liveY, 135, controlHeight);
         if (compact) {
             place(cellSpan, 20, bankY, 140, controlHeight);
             place(repetitions, 164, bankY, 120, controlHeight);
             place(cellName, 288, bankY, 150, controlHeight);
             place(storeCellButton, 442, bankY, 125, controlHeight);
-            place(bankSelect, 571, bankY, 160, controlHeight);
-            place(stemSelect, 735, bankY, 120, controlHeight);
-            place(updateCellButton, 859, bankY, 85, controlHeight);
-            place(roleSelect, 948, bankY, 140, controlHeight);
-            place(timbreSelect, 1092, bankY, 168, controlHeight);
+            place(bankSelect, 571, bankY, 150, controlHeight);
+            place(stemSelect, 725, bankY, 106, controlHeight);
+            place(autoRouteButton, 835, bankY, 58, controlHeight);
+            place(updateCellButton, 897, bankY, 78, controlHeight);
+            place(roleSelect, 979, bankY, 112, controlHeight);
+            place(timbreSelect, 1095, bankY, 165, controlHeight);
         } else {
             place(cellSpan, 20, bankY, 150, controlHeight);
             place(repetitions, 185, bankY, 130, controlHeight);
             place(cellName, 330, bankY, 150, controlHeight);
             place(storeCellButton, 490, bankY, 130, controlHeight);
-            place(bankSelect, 630, bankY, 155, controlHeight);
-            place(stemSelect, 795, bankY, 100, controlHeight);
-            place(updateCellButton, 905, bankY, 90, controlHeight);
-            place(roleSelect, 1005, bankY, 115, controlHeight);
-            place(timbreSelect, 1130, bankY, 130, controlHeight);
+            place(bankSelect, 630, bankY, 145, controlHeight);
+            place(stemSelect, 785, bankY, 90, controlHeight);
+            place(autoRouteButton, 879, bankY, 66, controlHeight);
+            place(updateCellButton, 949, bankY, 78, controlHeight);
+            place(roleSelect, 1031, bankY, 108, controlHeight);
+            place(timbreSelect, 1143, bankY, 117, controlHeight);
         }
         place(formulaInput, formulaEditorX, formulaFirstRowY, formulaEditorWidth, controlHeight);
         place(applyFormula, 690, formulaFirstRowY, 140, controlHeight);
@@ -3299,14 +3469,14 @@ public:
         place(zoomFitButton, 822, 554, 44, 26);
         place(undoGridButton, 620, 554, 100, 26);
         for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
-            const int y = 587 + stem * 30;
-            place(stemRoleSelect[static_cast<size_t>(stem)], 40, y + 3, 50, 22);
-            place(stemGain[static_cast<size_t>(stem)], 1040, y + 5, 74, 16);
-            place(stemMute[static_cast<size_t>(stem)], 1118, y + 3, 26, 22);
-            place(stemSolo[static_cast<size_t>(stem)], 1148, y + 3, 26, 22);
-            place(stemPan[static_cast<size_t>(stem)], 1180, y, 26, 26);
-            place(stemPanLabel[static_cast<size_t>(stem)], 1208, y + 3, 24, 20);
-            place(stemFx[static_cast<size_t>(stem)], 1234, y + 3, 28, 22);
+            const int y = 586 + stem * 22;
+            place(stemRoleSelect[static_cast<size_t>(stem)], 47, y + 1, 64, 19);
+            place(stemGain[static_cast<size_t>(stem)], 1040, y + 3, 74, 16);
+            place(stemMute[static_cast<size_t>(stem)], 1118, y + 1, 26, 19);
+            place(stemSolo[static_cast<size_t>(stem)], 1148, y + 1, 26, 19);
+            place(stemPan[static_cast<size_t>(stem)], 1180, y - 1, 26, 21);
+            place(stemPanLabel[static_cast<size_t>(stem)], 1208, y + 1, 24, 18);
+            place(stemFx[static_cast<size_t>(stem)], 1234, y + 1, 28, 19);
         }
         retroLookAndFeel.setUiScale(std::min(scaleX(), scaleY()));
         const auto uiScale = std::min(scaleX(), scaleY());
@@ -3361,18 +3531,61 @@ public:
             }
             return;
         }
-        if (!drawingArea().contains(point) ||
-            inscription.count >= int(inscription.strokes.size())) return;
+        if (!drawingArea().contains(point)) return;
+        if (event.mods.isAltDown()) {
+            const auto area = drawingArea();
+            const float nx = float(point.x - area.getX()) / float(area.getWidth());
+            const float ny = float(point.y - area.getY()) / float(area.getHeight());
+            float nearest = std::numeric_limits<float>::max();
+            movingStroke = -1;
+            for (int s = 0; s < inscription.count; ++s) {
+                const auto& stroke = inscription.strokes[static_cast<size_t>(s)];
+                for (int p = 0; p < stroke.count; ++p) {
+                    const auto& candidate = stroke.points[static_cast<size_t>(p)];
+                    const float distance = std::hypot(candidate.x - nx, candidate.y - ny);
+                    if (distance < nearest) { nearest = distance; movingStroke = s; }
+                }
+            }
+            if (nearest > 0.12f) movingStroke = -1;
+            if (movingStroke >= 0) {
+                lastStrokeMovePoint = point;
+                movingStrokeHistoryPushed = false;
+                currentPhraseGenerated = false;
+            }
+            return;
+        }
+        if (inscription.count >= int(inscription.strokes.size())) return;
+        pushDrawingUndo();
         currentPhraseGenerated = false;
         auto& stroke = inscription.strokes[static_cast<size_t>(inscription.count++)];
         stroke = {};
         drawing = true;
+        refreshDrawingHistoryButtons();
         drawingStartMillis = juce::Time::getMillisecondCounter();
         marqueeScrollStartMillis = drawingStartMillis;
-        appendPoint(point);
+        appendPoint(point, false, event.isPressureValid() ? event.pressure : -1.0f);
     }
     void mouseDrag(const juce::MouseEvent& event) override {
         const auto point = toLogical(event.getPosition());
+        if (movingStroke >= 0) {
+            const auto area = drawingArea();
+            const float dx = float(point.x - lastStrokeMovePoint.x) / float(area.getWidth());
+            const float dy = float(point.y - lastStrokeMovePoint.y) / float(area.getHeight());
+            if ((dx != 0.0f || dy != 0.0f) && !movingStrokeHistoryPushed) {
+                pushDrawingUndo();
+                movingStrokeHistoryPushed = true;
+            }
+            auto& stroke = inscription.strokes[static_cast<size_t>(movingStroke)];
+            for (int p = 0; p < stroke.count; ++p) {
+                auto& value = stroke.points[static_cast<size_t>(p)];
+                value.x = std::clamp(value.x + dx, 0.0f, 1.0f);
+                value.y = std::clamp(value.y + dy, 0.0f, 1.0f);
+            }
+            lastStrokeMovePoint = point;
+            updateLiveDrawing(false);
+            repaint();
+            return;
+        }
         if (loopRangeSelecting) {
             const int beat = beatAtGridX(point.x);
             loopRangeStartBeat = std::min(loopRangeAnchorBeat, double(beat));
@@ -3384,7 +3597,7 @@ public:
             updatePlacementDrag(point);
             return;
         }
-        if (drawing) appendPoint(point);
+        if (drawing) appendPoint(point, false, event.isPressureValid() ? event.pressure : -1.0f);
     }
     void mouseMove(const juce::MouseEvent& event) override {
         const auto point = toLogical(event.getPosition());
@@ -3423,6 +3636,12 @@ public:
     }
     void mouseUp(const juce::MouseEvent& event) override {
         const auto point = toLogical(event.getPosition());
+        if (movingStroke >= 0) {
+            movingStroke = -1;
+            status.setText(utf8("Traço deslocado · altura e percurso recalculados."), juce::dontSendNotification);
+            repaint();
+            return;
+        }
         if (loopRangeSelecting) {
             const int beat = beatAtGridX(point.x);
             loopRangeStartBeat = std::clamp(std::min(loopRangeAnchorBeat, double(beat)), 0.0, 4095.0);
@@ -3444,15 +3663,26 @@ public:
             return;
         }
         if (drawing) {
-            appendPoint(point, true);
-            const double duration = std::max(0.18, liveDuration.load(std::memory_order_relaxed));
-            const double phase = std::fmod(std::max(0.0, playheadSeconds.load(std::memory_order_relaxed)) / duration, 1.0);
-            releasedStrokeIndex = inscription.count - 1;
-            releasedStrokeShift = float(phase * drawingArea().getWidth());
-            releasedStrokeMillis = juce::Time::getMillisecondCounter();
-            marqueeScrollStartMillis = releasedStrokeMillis;
+            appendPoint(point, true, event.isPressureValid() ? event.pressure : -1.0f);
+            if (inscription.count > 0 && inscription.strokes[static_cast<size_t>(inscription.count - 1)].count < 2) {
+                inscription.strokes[static_cast<size_t>(--inscription.count)] = {};
+                if (drawingUndoCount > 0) {
+                    drawingUndoHistory[static_cast<size_t>(--drawingUndoCount)] = {};
+                    for (int i = 0; i < drawingRedoCount; ++i)
+                        drawingRedoHistory[static_cast<size_t>(i)] = {};
+                    drawingRedoCount = 0;
+                }
+            } else {
+                const double duration = std::max(0.18, liveDuration.load(std::memory_order_relaxed));
+                const double phase = std::fmod(std::max(0.0, playheadSeconds.load(std::memory_order_relaxed)) / duration, 1.0);
+                releasedStrokeIndex = inscription.count - 1;
+                releasedStrokeShift = float(phase * drawingArea().getWidth());
+                releasedStrokeMillis = juce::Time::getMillisecondCounter();
+                marqueeScrollStartMillis = releasedStrokeMillis;
+            }
         }
         drawing = false;
+        refreshDrawingHistoryButtons();
         repaint();
     }
     bool keyPressed(const juce::KeyPress& key) override {
@@ -3490,6 +3720,10 @@ private:
     static constexpr int logicalHeight = 900;
     float scaleX() const noexcept { return float(getWidth()) / float(logicalWidth); }
     float scaleY() const noexcept { return float(getHeight()) / float(logicalHeight); }
+    float autoEvolutionAmount() const noexcept {
+        constexpr std::array<float, 4> amounts{{0.0f, 0.4f, 0.7f, 1.0f}};
+        return amounts[static_cast<size_t>(std::clamp(autoEvolutionStrength, 1, 3))];
+    }
     juce::Font canvasFont(juce::Font font) const {
         font.setTypefaceName("DejaVu Sans Mono");
         return font;
@@ -3542,6 +3776,8 @@ private:
         automationEditorButton.setButtonText(uiText("CURVAS", "CURVES", "COURBES", "CURVAS"));
         albumMenuButton.setButtonText(uiText("Álbum…", "Album…", "Album…", "Álbum…"));
         cross.setButtonText(uiText("Riscar último", "Cross last", "Barrer dernier", "Tachar último"));
+        undoDrawingButton.setButtonText(uiText("Desfazer", "Undo", "Annuler", "Deshacer"));
+        redoDrawingButton.setButtonText(uiText("Refazer", "Redo", "Rétablir", "Rehacer"));
         clear.setButtonText(uiText("Limpar", "Clear", "Effacer", "Limpiar"));
         glyph.setButtonText(uiText("Leitura / glifo", "Reading / glyph", "Lecture / glyphe", "Lectura / glifo"));
         storeCellButton.setButtonText(uiText("Guardar célula", "Store cell", "Garder cellule", "Guardar célula"));
@@ -3587,8 +3823,11 @@ private:
         setChoiceText(seedSource, 2, uiText("Texto", "Text", "Texte", "Texto"));
         setChoiceText(seedSource, 3, uiText("Desenho", "Drawing", "Dessin", "Dibujo"));
         setChoiceText(seedSource, 4, uiText("Glitch: máscara", "Glitch: mask", "Glitch : masque", "Glitch: máscara"));
-        setChoiceText(stemSelect, 4, uiText("Sugerir posição", "Suggest placement", "Suggérer position", "Sugerir posición"));
-        setChoiceText(stemSelect, 5, uiText("Equilibrar som", "Balance sound", "Équilibrer le son", "Equilibrar sonido"));
+        setChoiceText(stemSelect, 4, uiText("Stem 4 · Ritmo", "Stem 4 · Rhythm", "Stem 4 · Rythme", "Stem 4 · Ritmo"));
+        setChoiceText(stemSelect, 5, uiText("Stem 5 · Textura", "Stem 5 · Texture", "Stem 5 · Texture", "Stem 5 · Textura"));
+        autoRouteButton.setButtonText(uiText("AUTO", "AUTO", "AUTO", "AUTO"));
+        setChoiceText(stemSelect, 6, uiText("Sugerir posição", "Suggest placement", "Suggérer position", "Sugerir posición"));
+        setChoiceText(stemSelect, 7, uiText("Equilibrar som", "Balance sound", "Équilibrer le son", "Equilibrar sonido"));
         setChoiceText(cellSpan, 1, uiText("1 tempo", "1 beat", "1 temps", "1 pulso"));
         setChoiceText(cellSpan, 2, uiText("1 compasso", "1 bar", "1 mesure", "1 compás"));
         setChoiceText(cellSpan, 4, uiText("2 compassos", "2 bars", "2 mesures", "2 compases"));
@@ -4123,9 +4362,24 @@ private:
             compareOriginalSections ? risco::SectionEdits{} : currentSectionEdits;
         if (id != 0) song.bank[static_cast<size_t>(song.cellCount - 1)].phraseMeters = effectivePhraseMeters();
         if (id != 0) song.bank[static_cast<size_t>(song.cellCount - 1)].phraseSectionBars = effectivePhraseSectionBars();
-        risco::Placement generated{id, start,
-            currentPhraseVersion == 4 ? risco::CellSpan::twoBars : risco::CellSpan::fourBars, 1};
-        generated.stem = pendingStem;
+        const auto span = currentPhraseVersion == 4 ? risco::CellSpan::twoBars : risco::CellSpan::fourBars;
+        int generatedStart = start;
+        int generatedStem = pendingStem;
+        if (autoRouteButton.getToggleState()) {
+            const auto routeSeed = currentPhraseSeed ^
+                (std::uint64_t(currentPhraseVariation) * 0x9e3779b97f4a7c15ULL);
+            if (id != 0)
+                song.bank[static_cast<size_t>(song.cellCount - 1)].role = generativeRoleForCell(
+                    song.bank[static_cast<size_t>(song.cellCount - 1)], routeSeed);
+            const auto suggestion = risco::suggestPlacement(song, id, span, 1,
+                start, true, routeSeed);
+            if (suggestion.valid) {
+                generatedStart = suggestion.startBeat;
+                generatedStem = suggestion.stem;
+            }
+        }
+        risco::Placement generated{id, generatedStart, span, 1};
+        generated.stem = generatedStem;
         const auto gridBefore = captureGridState();
         if (id == 0 || !risco::placeCell(song, generated)) {
             status.setText(utf8("Não foi possível registrar a função na performance."),
@@ -4136,8 +4390,11 @@ private:
         ensurePlacementVisible(song.placementCount - 1);
         refreshBank(song.cellCount - 1, false);
         playArrangement(false);
-        status.setText(utf8("Função registrada no banco e na grade, STEM ") +
-                       juce::String(generated.stem + 1) + ".",
+        status.setText((autoRouteButton.getToggleState()
+            ? utf8("Risco escolheu a entrada desta frase · STEM ")
+            : utf8("Função registrada no banco e na grade, STEM ")) +
+                       juce::String(generated.stem + 1) +
+                       (autoRouteButton.getToggleState() ? utf8(" · seed + atividade da grade.") : "."),
                        juce::dontSendNotification);
         repaint();
         return true;
@@ -4660,7 +4917,7 @@ private:
     }
 
     juce::Rectangle<int> drawingArea() const { return {96, 364, logicalWidth - 192, 116}; }
-    juce::Rectangle<int> gridArea() const { return {20, 550, logicalWidth - 40, 140}; }
+    juce::Rectangle<int> gridArea() const { return {20, 550, logicalWidth - 40, 148}; }
     void paintDrawing(juce::Graphics& g) {
         const auto panel = juce::Rectangle<float>(80.0f, 332.0f, float(logicalWidth - 160), 160.0f);
         const auto canvas = drawingArea().toFloat();
@@ -4677,7 +4934,7 @@ private:
         g.setFont(canvasFont(juce::Font(juce::FontOptions(12.0f))));
         const auto entryHint = textEntryMode
             ? uiText("UTF-8 · acentos e pontuação · clique em Desenhar para riscar", "UTF-8 · accents and punctuation · choose Draw to switch modes", "UTF-8 · accents et ponctuation · choisir Dessiner", "UTF-8 · acentos y puntuación · elija Dibujar")
-            : juce::String(inscription.count) + uiText(" / 12 traços · arraste para desenhar · clique em Digitar texto", " / 12 strokes · drag to draw · choose Type text to switch modes", " / 12 traits · glisser pour dessiner · choisir Saisir texte", " / 12 trazos · arrastre para dibujar · elija Escribir texto");
+            : juce::String(inscription.count) + uiText(" / 12 traços · arraste desenha · Alt+arraste desloca · X silencia", " / 12 strokes · drag draws · Alt+drag moves · X silences", " / 12 traits · glisser dessine · Alt+glisser déplace · X silence", " / 12 trazos · arrastrar dibuja · Alt+arrastrar mueve · X silencia");
         drawCanvasText(g, entryHint,
                    600, 339, 568, 20, juce::Justification::right);
         g.setColour(juce::Colour(0xff0c1728));
@@ -4718,6 +4975,20 @@ private:
             };
             const auto colour = juce::Colour(stroke.crossed ? crossedGraffitiColour
                 : graffitiColours[static_cast<std::size_t>(s) % graffitiColours.size()]);
+            const auto smoothedPressure = [&stroke](int index) {
+                float sum = 0.0f;
+                float weightSum = 0.0f;
+                for (int offset = -1; offset <= 1; ++offset) {
+                    const int at = std::clamp(index + offset, 0, stroke.count - 1);
+                    const auto& sample = stroke.points[static_cast<size_t>(at)];
+                    const float value = sample.pressure >= 0.0f && sample.pressure <= 1.0f
+                        ? sample.pressure : 1.0f - sample.y;
+                    const float weight = offset == 0 ? 2.0f : 1.0f;
+                    sum += value * weight;
+                    weightSum += weight;
+                }
+                return sum / weightSum;
+            };
             for (const float wrap : {-canvas.getWidth(), 0.0f, canvas.getWidth()}) {
                 juce::Path path;
                 path.startNewSubPath(point(0, wrap));
@@ -4726,8 +4997,15 @@ private:
                 g.strokePath(path, juce::PathStrokeType(7.0f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
                 g.setColour(colour);
-                g.strokePath(path, juce::PathStrokeType(2.8f, juce::PathStrokeType::curved,
+                g.strokePath(path, juce::PathStrokeType(1.2f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
+                for (int p = 1; p < stroke.count; ++p) {
+                    const float aPressure = smoothedPressure(p - 1);
+                    const float bPressure = smoothedPressure(p);
+                    const float thickness = 1.4f + 2.0f * std::clamp((aPressure + bPressure) * 0.5f, 0.0f, 1.0f);
+                    const auto from = point(p - 1, wrap), to = point(p, wrap);
+                    g.drawLine(from.x, from.y, to.x, to.y, thickness);
+                }
             }
             const auto start = point(0, 0.0f);
             const auto end = point(stroke.count - 1, 0.0f);
@@ -4933,13 +5211,9 @@ private:
         }
         g.setColour(juce::Colour(0xff91a8b6));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(10.0f))));
-        drawCanvasText(g, uiText("RODA: NAVEGAR · CTRL+RODA: ZOOM · BORDAS: RECORTAR", "WHEEL: SCROLL · CTRL+WHEEL: ZOOM · EDGES: TRIM", "ROUE : DÉFILER · CTRL+ROUE : ZOOM · BORDS : COUPER", "RUEDA: DESPLAZAR · CTRL+RUEDA: ZOOM · BORDES: RECORTAR"),
-                   logicalWidth - 500, 673, 468, 14,
-                   juce::Justification::right);
-        drawCanvasText(g, uiText("CENTRO: MOVER · VERTICAL: STEM · SHIFT+ARRASTE: LOOP", "CENTER: MOVE · VERTICAL: STEM · SHIFT+DRAG: LOOP", "CENTRE : DÉPLACER · VERTICAL : STEM · MAJ+GLISSER : BOUCLE", "CENTRO: MOVER · VERTICAL: STEM · MAYÚS+ARRASTRE: BUCLE"), 32, 675, 410, 12,
-                   juce::Justification::left);
         g.setColour(juce::Colour(0xff9fb2c2));
         g.setFont(canvasFont(juce::Font(juce::FontOptions(9.0f, juce::Font::bold))));
+        drawCanvasText(g, utf8("CANAIS 1–5"), 25, 572, 84, 12, juce::Justification::centredLeft);
         drawCanvasText(g, "VOL", 1040, 572, 74, 12, juce::Justification::centredLeft);
         drawCanvasText(g, "M", 1118, 572, 26, 12, juce::Justification::centred);
         drawCanvasText(g, "S", 1148, 572, 26, 12, juce::Justification::centred);
@@ -4955,34 +5229,31 @@ private:
         g.saveState();
         g.reduceClipRegion(area.toNearestInt());
         for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
-            const float rowY = 586.0f + float(stem) * 30.0f;
+            const float rowY = 586.0f + float(stem) * 22.0f;
             g.setColour(juce::Colour(stem == 1 ? 0xff243444 : 0xff1e2d3b).withAlpha(0.72f));
-            g.fillRoundedRectangle(24.0f, rowY, float(logicalWidth - 48), 28.0f, 3.0f);
+            g.fillRoundedRectangle(24.0f, rowY, float(logicalWidth - 48), 20.0f, 3.0f);
             if (draggedPlacement >= 0 && placementDragMoved && placementDragStem == stem) {
                 g.setColour(juce::Colour(0xff56d6ad).withAlpha(0.16f));
-                g.fillRoundedRectangle(24.0f, rowY, float(logicalWidth - 48), 28.0f, 3.0f);
+                g.fillRoundedRectangle(24.0f, rowY, float(logicalWidth - 48), 20.0f, 3.0f);
             }
             g.setColour(juce::Colour(0xff9fb2c2));
             g.setFont(canvasFont(juce::Font(juce::FontOptions(10.0f, juce::Font::bold))));
-            const int stemMeter = song.stemMeter[static_cast<size_t>(stem)];
-            const auto meterLabel = stemMeter == 0 ? juce::String() :
-                stemMeter == 8 ? juce::String(" 6/8") : " " + juce::String(stemMeter) + "/4";
-            drawCanvasText(g, "S" + juce::String(stem + 1) + meterLabel, 25, int(rowY), 62, 28,
+            drawCanvasText(g, "S" + juce::String(stem + 1), 25, int(rowY), 20, 20,
                        juce::Justification::centredLeft, false);
         }
         g.setColour(juce::Colour(0xff637384));
-        g.drawVerticalLine(1032, 576.0f, 675.0f);
+        g.drawVerticalLine(1032, 576.0f, 697.0f);
         g.reduceClipRegion(juce::Rectangle<int>(juce::roundToInt(left), 584,
-                                                juce::roundToInt(width), 101));
+                                                juce::roundToInt(width), 113));
         if (loopRangeEndBeat > loopRangeStartBeat) {
             const float rangeX = left + (float(loopRangeStartBeat) - float(viewStart)) * scale;
             const float rangeW = (float(loopRangeEndBeat) - float(loopRangeStartBeat)) * scale;
             g.setColour(juce::Colour(0xff56d6ad).withAlpha(
                 loopRangeEnabled.load(std::memory_order_acquire) ? 0.18f : 0.08f));
-            g.fillRect(rangeX, 584.0f, rangeW, 100.0f);
+            g.fillRect(rangeX, 584.0f, rangeW, 112.0f);
             g.setColour(juce::Colour(0xff56d6ad).withAlpha(0.88f));
-            g.drawVerticalLine(juce::roundToInt(rangeX), 584.0f, 684.0f);
-            g.drawVerticalLine(juce::roundToInt(rangeX + rangeW), 584.0f, 684.0f);
+            g.drawVerticalLine(juce::roundToInt(rangeX), 584.0f, 696.0f);
+            g.drawVerticalLine(juce::roundToInt(rangeX + rangeW), 584.0f, 696.0f);
         }
         g.setColour(juce::Colour(0xff465063));
         const int lineWidth = song.beatsPerBar * barStride;
@@ -4991,7 +5262,7 @@ private:
         for (int beat = firstLine; beat <= lastLine;
              beat += song.beatsPerBar * barStride) {
             const float x = left + (float(beat) - float(viewStart)) * scale;
-            g.drawVerticalLine(juce::roundToInt(x), 585.0f, 682.0f);
+            g.drawVerticalLine(juce::roundToInt(x), 585.0f, 696.0f);
         }
         for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
             const int selected = song.stemMeter[static_cast<size_t>(stem)];
@@ -5003,7 +5274,7 @@ private:
             g.setColour(juce::Colour(0xffffc65c).withAlpha(0.34f));
             for (int beat = first; beat <= lastLine; beat += step) {
                 const float x = left + (float(beat) - float(viewStart)) * scale;
-                const float y = 586.0f + float(stem) * 30.0f;
+                const float y = 586.0f + float(stem) * 22.0f;
                 g.drawVerticalLine(juce::roundToInt(x), y, y + 28.0f);
             }
         }
@@ -5025,11 +5296,11 @@ private:
                 ? placementDragStem : p.stem;
             const float x = left + (float(visibleStart) - float(viewStart)) * scale;
             const float w = std::max(2.0f, visibleLength * scale - 2.0f);
-            const float y = 588.0f + float(visibleStem) * 30.0f;
+            const float y = 587.0f + float(visibleStem) * 22.0f;
             const bool isActive = activePlacements[static_cast<size_t>(i)];
             if (isActive) {
                 g.setColour(juce::Colour(0xffffc65c).withAlpha(0.25f));
-                g.fillRoundedRectangle(x - 3.0f, y - 3.0f, w + 6.0f, 30.0f, 6.0f);
+                g.fillRoundedRectangle(x - 3.0f, y - 2.0f, w + 6.0f, 22.0f, 5.0f);
             }
             auto blockColour = juce::Colour(graffitiColours[static_cast<std::size_t>(p.cellId) % graffitiColours.size()]);
             if (i == draggedPlacement && placementDragMoved) blockColour = blockColour.brighter(0.25f);
@@ -5079,7 +5350,7 @@ private:
             const float x = left + (beat - float(viewStart)) * scale;
             if (x >= left && x <= left + width) {
                 g.setColour(juce::Colour(0xffffc65c));
-                g.fillRect(x - 1.5f, 584.0f, 3.0f, 100.0f);
+            g.fillRect(x - 1.5f, 584.0f, 3.0f, 112.0f);
                 juce::Path marker;
                 marker.startNewSubPath(x - 5.0f, 583.0f);
                 marker.lineTo(x + 5.0f, 583.0f);
@@ -5140,22 +5411,22 @@ private:
         return std::clamp(int(std::floor(gridViewStart() +
                           (float(x) - gridTimelineLeft()) / scale)), 0, 4096);
     }
-    float gridTimelineLeft() const noexcept { return 92.0f; }
+    float gridTimelineLeft() const noexcept { return 116.0f; }
     float gridTimelineRight() const noexcept { return 1028.0f; } // 12 before mixer controls.
     float gridTimelineWidth() const noexcept { return gridTimelineRight() - gridTimelineLeft(); }
     int gridStemAtY(int y) const noexcept {
-        return std::clamp((y - 600 + 15) / 30, 0, risco::Song::stemCount - 1);
+        return std::clamp((y - 586 + 11) / 22, 0, risco::Song::stemCount - 1);
     }
     int placementAtGridPoint(juce::Point<int> point, bool skipSelected = false) const {
-        if (point.y < 585 || point.y > 684 || float(point.x) > gridTimelineRight()) return -1;
+        if (point.y < 585 || point.y > 696 || float(point.x) > gridTimelineRight()) return -1;
         const float scale = gridTimelineWidth() / float(gridViewSpan());
         const auto contains = [this, &point, scale](int index) {
             const auto& p = song.grid[static_cast<size_t>(index)];
             const float x = gridTimelineLeft() + (p.startBeat - gridViewStart()) * scale;
             const float w = std::max(2.0f, placementBeats(p) * scale - 2.0f);
-            const float y = 588.0f + float(p.stem) * 30.0f;
+            const float y = 587.0f + float(p.stem) * 22.0f;
             return float(point.x) >= x && float(point.x) <= x + w &&
-                   float(point.y) >= y && float(point.y) <= y + 24.0f;
+                   float(point.y) >= y && float(point.y) <= y + 18.0f;
         };
         if (!skipSelected && selectedPlacement >= 0 && selectedPlacement < song.placementCount &&
             contains(selectedPlacement)) return selectedPlacement;
@@ -5265,11 +5536,15 @@ private:
         repaint();
     }
     void handleGridClick(juce::Point<int> point) {
-        if (point.y < 585 || point.y > 674) return;
+        if (point.y < 585 || point.y > 696) return;
         const int beat = beatAtGridX(point.x);
+        startBeat.setText(juce::String(beat));
+        if (autoRouteButton.getToggleState()) {
+            placeSelectedCell();
+            return;
+        }
         pendingStem = gridStemAtY(point.y);
         stemSelect.setSelectedId(pendingStem + 1, juce::dontSendNotification);
-        startBeat.setText(juce::String(beat));
         placeSelectedCell();
     }
     int selectedCellIndex() const {
@@ -5818,6 +6093,10 @@ private:
                 status.setText(utf8("Banco cheio ou fórmula inválida."), juce::dontSendNotification);
                 return;
             }
+            auto& stored = song.bank[static_cast<size_t>(song.cellCount - 1)];
+            stored.role = autoRouteButton.getToggleState()
+                ? generativeRoleForCell(stored, routingSeedForCell(stored))
+                : song.stemRole[static_cast<size_t>(std::clamp(pendingStem, 0, risco::Song::stemCount - 1))];
             const bool archived = archiveFormula(song.bank[static_cast<size_t>(song.cellCount - 1)]);
             refreshBank(song.cellCount - 1, false);
             status.setText(archived ? utf8("Fórmula e onda guardadas no banco e no repositório.")
@@ -5856,8 +6135,16 @@ private:
             status.setText(utf8("Banco cheio ou célula inválida."), juce::dontSendNotification);
             return;
         }
+        auto& stored = song.bank[static_cast<size_t>(song.cellCount - 1)];
+        stored.role = autoRouteButton.getToggleState()
+            ? generativeRoleForCell(stored, routingSeedForCell(stored))
+            : song.stemRole[static_cast<size_t>(std::clamp(pendingStem, 0, risco::Song::stemCount - 1))];
         refreshBank(song.cellCount - 1);
-        status.setText(utf8("Célula guardada no banco da música."), juce::dontSendNotification);
+        status.setText(autoRouteButton.getToggleState()
+            ? utf8("Célula guardada · AUTO definiu o papel musical. Inserir célula deixa o Risco escolher tempo e canal.")
+            : utf8("Célula guardada com papel do Stem ") + juce::String(pendingStem + 1) +
+                  utf8(". Clique na grade para inserir no canal escolhido."),
+                       juce::dontSendNotification);
     }
     void updateSelectedCell() {
         const int index = selectedCellIndex();
@@ -6031,40 +6318,88 @@ private:
         if ((albumJob && albumJob->isThreadRunning()) ||
             (albumRenderJob && albumRenderJob->isThreadRunning())) return;
         albumDialog = std::make_unique<juce::AlertWindow>(
-            utf8("Planejar álbum generativo"),
-            utf8("Deriva faixas completas e independentes. Nesta etapa, os projetos .risco e o manifesto serão criados; WAVs serão uma etapa posterior."),
+            uiText("Planejar álbum generativo", "Plan generative album", "Planifier un album génératif", "Planificar álbum generativo"),
+            uiText("Deriva faixas completas e independentes. Nesta etapa, os projetos .risco e o manifesto serão criados; WAVs serão uma etapa posterior.",
+                   "Derives complete, independent tracks. This step creates the .risco projects and manifest; WAV rendering comes later.",
+                   "Dérive des morceaux complets et indépendants. Cette étape crée les projets .risco et le manifeste ; le rendu WAV viendra ensuite.",
+                   "Deriva piezas completas e independientes. Este paso crea los proyectos .risco y el manifiesto; el render WAV vendrá después."),
             juce::MessageBoxIconType::NoIcon);
-        albumDialog->addTextEditor("title", utf8("Núcleo"), utf8("Título do álbum:"));
+        albumDialog->addTextEditor("title", uiText("Núcleo", "Core", "Noyau", "Núcleo"),
+                                   uiText("Título do álbum:", "Album title:", "Titre de l’album :", "Título del álbum:"));
         albumDialog->getTextEditor("title")->setInputRestrictions(128);
-        albumDialog->addTextEditor("seed", "20261123", utf8("Seed-mãe (1–2⁶⁴−1):"));
-        albumDialog->getTextEditor("seed")->setInputRestrictions(20, "0123456789");
+        std::array<risco::AlbumSource, 3> sources{};
+        const auto text = ascii.getText().trim().toStdString();
+        if (!text.empty()) {
+            sources[1] = {risco::SeedTrackMaterial::text, risco::formulaSeedFromText(text),
+                          risco::seedTrackTextCue(text), risco::seedTrackMotif(risco::composeText(text))};
+        }
+        if (inscription.count > 0) {
+            sources[2] = {risco::SeedTrackMaterial::drawing, risco::formulaSeedFromDrawing(inscription),
+                          risco::seedTrackDrawingCue(inscription), risco::seedTrackMotif(risco::compose(inscription))};
+        }
+        albumDialog->addComboBox("source", {
+            uiText("Número", "Number", "Nombre", "Número"),
+            uiText("Texto atual", "Current text", "Texte actuel", "Texto actual"),
+            uiText("Desenho atual", "Current drawing", "Dessin actuel", "Dibujo actual")},
+            uiText("Origem:", "Source:", "Source :", "Origen:"));
+        auto* sourceChoice = albumDialog->getComboBoxComponent("source");
+        for (int i = 1; i < int(sources.size()); ++i)
+            sourceChoice->setItemEnabled(i + 1, sources[static_cast<std::size_t>(i)].motif.count > 0);
+        const int selectedSource = seedSource.getSelectedId();
+        sourceChoice->setSelectedId(selectedSource >= 2 && selectedSource <= 3 &&
+            sourceChoice->isItemEnabled(selectedSource) ? selectedSource : 1, juce::dontSendNotification);
+        albumDialog->addTextEditor("seed", "20261123", uiText("Seed-mãe (1–2⁶⁴−1):", "Root seed (1–2⁶⁴−1):", "Seed mère (1–2⁶⁴−1) :", "Seed madre (1–2⁶⁴−1):"));
+        auto* seedEditor = albumDialog->getTextEditor("seed");
+        seedEditor->setInputRestrictions(20, "0123456789");
+        sourceChoice->onChange = [sourceChoice, seedEditor, sources, previous = 1,
+                                   values = std::array<juce::String, 3>{"20261123", {}, {}}]() mutable {
+            values[static_cast<std::size_t>(previous - 1)] = seedEditor->getText();
+            previous = std::clamp(sourceChoice->getSelectedId(), 1, 3);
+            const auto index = static_cast<std::size_t>(previous - 1);
+            const auto suggestion = juce::String(sources[index].fingerprint);
+            seedEditor->setText(values[index].isEmpty() && previous > 1 ? suggestion : values[index], false);
+        };
+        sourceChoice->onChange();
         juce::StringArray countChoices;
         for (int count = 2; count <= risco::AlbumPlan::maxTracks; ++count)
             countChoices.add(juce::String(count));
-        albumDialog->addComboBox("count", countChoices, utf8("Número de faixas:"));
+        albumDialog->addComboBox("count", countChoices, uiText("Número de faixas:", "Number of tracks:", "Nombre de morceaux :", "Número de piezas:"));
         albumDialog->getComboBoxComponent("count")->setSelectedId(7, juce::dontSendNotification);
-        albumDialog->addTextEditor("bpm", "110", utf8("BPM central (40–240):"));
+        albumDialog->addTextEditor("bpm", "110", uiText("BPM central (40–240):", "Center BPM (40–240):", "BPM central (40–240) :", "BPM central (40–240):"));
         albumDialog->getTextEditor("bpm")->setInputRestrictions(6, "0123456789.");
-        albumDialog->addTextEditor("spread", "20", utf8("Amplitude do contorno (0–40 BPM):"));
+        albumDialog->addTextEditor("spread", "20", uiText("Amplitude do contorno (0–40 BPM):", "Tempo contour range (0–40 BPM):", "Amplitude du contour (0–40 BPM) :", "Amplitud del contorno (0–40 BPM):"));
         albumDialog->getTextEditor("spread")->setInputRestrictions(5, "0123456789.");
         juce::StringArray contours;
-        contours.add(utf8("Equilibrado"));
-        contours.add(utf8("Contrastante"));
-        contours.add(utf8("Ascendente"));
-        contours.add(utf8("Arco"));
-        albumDialog->addComboBox("contour", contours, utf8("Contorno de andamento:"));
+        contours.add(uiText("Equilibrado", "Balanced", "Équilibré", "Equilibrado"));
+        contours.add(uiText("Contrastante", "Contrasting", "Contrasté", "Contrastante"));
+        contours.add(uiText("Ascendente", "Rising", "Ascendant", "Ascendente"));
+        contours.add(uiText("Arco", "Arc", "Arc", "Arco"));
+        albumDialog->addComboBox("contour", contours, uiText("Contorno de andamento:", "Tempo contour:", "Contour de tempo :", "Contorno de tempo:"));
         albumDialog->getComboBoxComponent("contour")->setSelectedId(4, juce::dontSendNotification);
-        albumDialog->addComboBox("profile", {utf8("Original · retomar V1"),
-            utf8("Parentesco · paletas recorrentes"),
-            utf8("Contraste · alterna formas, ritmos e timbres")}, utf8("Percurso musical:"));
+        albumDialog->addComboBox("profile", {
+            uiText("Original · retomar V1", "Original · resume V1", "Original · reprendre V1", "Original · retomar V1"),
+            uiText("Parentesco · paletas recorrentes", "Related · recurring palettes", "Parenté · palettes récurrentes", "Afinidad · paletas recurrentes"),
+            uiText("Contraste · alterna formas, ritmos e timbres", "Contrasting · varies form, rhythm and timbre", "Contraste · alterne formes, rythmes et timbres", "Contraste · alterna formas, ritmos y timbres")},
+            uiText("Percurso musical:", "Musical profile:", "Parcours musical :", "Recorrido musical:"));
         albumDialog->getComboBoxComponent("profile")->setSelectedId(3, juce::dontSendNotification);
+        albumDialog->addComboBox("arrangement", {
+            uiText("Por partes", "By parts", "Par sections", "Por secciones"),
+            uiText("Contínuo", "Continuous", "Continu", "Continuo")},
+            uiText("Arranjo:", "Arrangement:", "Arrangement :", "Arreglo:"));
+        albumDialog->getComboBoxComponent("arrangement")->setSelectedId(1, juce::dontSendNotification);
+        albumDialog->addTextEditor("trackProfiles", "", uiText(
+            "Perfis por faixa · O original, R parentesco, C contraste, - perfil geral",
+            "Per-track profiles · O original, R related, C contrasting, - album default",
+            "Profils par morceau · O original, R parenté, C contraste, - profil général",
+            "Perfiles por pieza · O original, R afinidad, C contraste, - perfil general"));
+        albumDialog->getTextEditor("trackProfiles")->setInputRestrictions(23, "ORCorc- ,");
         albumDialog->addButton(uiText("Revisar plano", "Review plan", "Vérifier le plan", "Revisar plan"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
         albumDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         albumDialog->enterModalState(true, juce::ModalCallbackFunction::create(
-            [safeThis](int choice) {
+            [safeThis, sources](int choice) {
                 if (!safeThis || !safeThis->albumDialog) return;
                 const auto title = safeThis->albumDialog->getTextEditorContents("title").trim();
                 const auto seedText = safeThis->albumDialog->getTextEditorContents("seed").trim().toStdString();
@@ -6073,6 +6408,9 @@ private:
                 const int countId = safeThis->albumDialog->getComboBoxComponent("count")->getSelectedId();
                 const int contourId = safeThis->albumDialog->getComboBoxComponent("contour")->getSelectedId();
                 const int profileId = safeThis->albumDialog->getComboBoxComponent("profile")->getSelectedId();
+                const int arrangementId = safeThis->albumDialog->getComboBoxComponent("arrangement")->getSelectedId();
+                const int sourceId = safeThis->albumDialog->getComboBoxComponent("source")->getSelectedId();
+                const auto trackProfilesText = safeThis->albumDialog->getTextEditorContents("trackProfiles");
                 safeThis->albumDialog.reset();
                 if (choice != 1) return;
                 std::uint64_t seed = 0;
@@ -6084,8 +6422,12 @@ private:
                     parsed.ptr != seedText.data() + seedText.size() || seed == 0 ||
                     !std::isfinite(bpm) || !std::isfinite(spread) || countId < 1 ||
                     countId > risco::AlbumPlan::maxTracks - 1 || contourId < 1 || contourId > 4 ||
-                    profileId < 1 || profileId > 3) {
-                    safeThis->status.setText(utf8("Parâmetros inválidos; nenhum arquivo foi criado."), juce::dontSendNotification);
+                    profileId < 1 || profileId > 3 || sourceId < 1 || sourceId > int(sources.size())) {
+                    safeThis->status.setText(safeThis->uiText(
+                        "Parâmetros inválidos; nenhum arquivo foi criado.",
+                        "Invalid parameters; no files were created.",
+                        "Paramètres invalides ; aucun fichier n’a été créé.",
+                        "Parámetros inválidos; no se creó ningún archivo."), juce::dontSendNotification);
                     return;
                 }
                 risco::AlbumPlanRequest request;
@@ -6095,11 +6437,27 @@ private:
                 request.tempoSpread = spread;
                 request.contour = static_cast<risco::AlbumTempoContour>(contourId - 1);
                 request.profile = static_cast<risco::AlbumMusicProfile>(profileId - 1);
+                request.arrangeByParts = arrangementId == 1;
+                request.source = sources[static_cast<std::size_t>(sourceId - 1)];
+                request.generatorVersion = request.source.material == risco::SeedTrackMaterial::none ? 1 : 2;
+                if (!parseAlbumTrackProfiles(trackProfilesText, request.trackCount, request.trackProfiles)) {
+                    safeThis->status.setText(safeThis->uiText(
+                        "Perfis inválidos. Use uma sequência O, R, C ou - (por exemplo: C,R,-,O).",
+                        "Invalid profiles. Use a sequence of O, R, C or - (for example: C,R,-,O).",
+                        "Profils invalides. Utilisez une suite O, R, C ou - (exemple : C,R,-,O).",
+                        "Perfiles no válidos. Use una secuencia O, R, C o - (por ejemplo: C,R,-,O)."),
+                        juce::dontSendNotification);
+                    return;
+                }
                 risco::AlbumPlan plan;
                 risco::AlbumManifest manifest;
                 if (!risco::makeAlbumPlan(request, plan) ||
                     !risco::createAlbumManifest(plan, title.toStdString(), manifest)) {
-                    safeThis->status.setText(utf8("Plano fora dos limites do Álbum; revise BPM, amplitude e título."),
+                    safeThis->status.setText(safeThis->uiText(
+                                                 "Plano fora dos limites do Álbum; revise BPM, amplitude e título.",
+                                                 "Album plan is out of range; check BPM, range and title.",
+                                                 "Le plan dépasse les limites de l’album ; vérifiez le BPM, l’amplitude et le titre.",
+                                                 "El plan supera los límites del álbum; revise BPM, amplitud y título."),
                                              juce::dontSendNotification);
                     return;
                 }
@@ -6108,34 +6466,80 @@ private:
     }
     void reviewAlbumPlan(risco::AlbumManifest manifest) {
         double totalSeconds = 0.0;
-        const char* forms[] = {"Original V1", "Retorno", "Colagem"};
-        const char* pulses[] = {"reto", "swing", "recortado"};
-        const char* palettes[] = {"original", "ressonante", "AY tonal", "grão"};
-        const char* surprises[] = {"contida", "média", "alta"};
+        const juce::StringArray forms{
+            uiText("Original V1", "Original V1", "Original V1", "Original V1"),
+            uiText("Retorno", "Return", "Retour", "Retorno"),
+            uiText("Colagem", "Collage", "Collage", "Collage")};
+        const juce::StringArray pulses{
+            uiText("reto", "straight", "droit", "recto"), "swing",
+            uiText("recortado", "cut-up", "découpé", "recortado")};
+        const juce::StringArray palettes{
+            uiText("original", "original", "originale", "original"),
+            uiText("ressonante", "resonant", "résonante", "resonante"),
+            "AY", uiText("grão", "grain", "grain", "grano")};
+        const juce::StringArray surprises{
+            uiText("contida", "subtle", "contenue", "contenida"),
+            uiText("média", "medium", "moyenne", "media"),
+            uiText("alta", "high", "forte", "alta")};
+        const juce::StringArray profiles{
+            uiText("Original", "Original", "Original", "Original"),
+            uiText("Parentesco", "Related", "Parenté", "Afinidad"),
+            uiText("Contraste", "Contrasting", "Contraste", "Contraste")};
+        const juce::StringArray motifVoices{
+            uiText("melodia", "melody", "mélodie", "melodía"),
+            uiText("baixo", "bass", "basse", "bajo"),
+            uiText("textura", "texture", "texture", "textura")};
+        const juce::StringArray motifReturns{
+            uiText("retorno literal", "literal return", "retour littéral", "retorno literal"),
+            uiText("retorno espelhado", "mirrored return", "retour en miroir", "retorno en espejo"),
+            uiText("retorno espelhado + retrógrado", "mirrored + retrograde return",
+                   "retour en miroir + rétrograde", "retorno en espejo + retrógrado")};
+        juce::String sourceSummary;
+        const auto material = manifest.plan.request.source.material;
+        if (material != risco::SeedTrackMaterial::none)
+            sourceSummary = (material == risco::SeedTrackMaterial::text
+                ? uiText("Motivo do texto", "Text motif", "Motif du texte", "Motivo del texto")
+                : uiText("Motivo do desenho", "Drawing motif", "Motif du dessin", "Motivo del dibujo")) +
+                utf8(" · seed ") + juce::String(manifest.plan.request.seed) + "\n";
         juce::StringArray summaries;
         for (int index = 0; index < manifest.count; ++index) {
             const auto& track = manifest.tracks[static_cast<size_t>(index)];
             totalSeconds += track.plannedSeconds;
             const auto& plan = track.plan;
             auto summary = juce::String(index + 1).paddedLeft('0', 2) + "  " +
+                profiles[static_cast<int>(plan.profile)] + " · " +
                 juce::String(plan.bpm, 1) + " BPM / " + juce::String(plan.durationBars) +
-                utf8(" cp · ") + utf8(forms[static_cast<unsigned>(plan.form)]);
+                uiText(" compassos · ", " bars · ", " mesures · ", " compases · ") +
+                forms[static_cast<int>(plan.form)];
             if (plan.form != risco::SeedTrackForm::original)
-                summary += utf8(" · ") + utf8(pulses[static_cast<unsigned>(plan.pulse)]) +
-                    utf8(" · ") + utf8(palettes[static_cast<unsigned>(plan.palette)]) +
-                    utf8(" · surpresa ") + utf8(surprises[plan.surprise]);
+                summary += juce::String(" · ") + pulses[static_cast<int>(plan.pulse)] +
+                    " · " + palettes[static_cast<int>(plan.palette)] +
+                    " · " + uiText("surpresa ", "surprise ", "surprise ", "sorpresa ") + surprises[plan.surprise];
+            if (plan.motifStem >= 0)
+                summary += utf8(" · ") + uiText("motivo na pista ", "motif on ", "motif sur la piste ", "motivo en ") +
+                    motifVoices[plan.motifStem / 2];
+            if (plan.generatorVersion >= 2 && plan.motifStem >= 0)
+                summary += utf8(" · ") + motifReturns[std::clamp(plan.surprise, 0, 2)];
             summaries.add(summary);
         }
         const auto minutes = totalSeconds / 60.0;
-        showActivity(utf8("Plano de álbum · seed ") + juce::String(manifest.plan.request.seed) +
-                     " · " + juce::String(manifest.count) + utf8(" faixas · ") +
-                     juce::String(minutes, 1) + " min previstos");
+        showActivity(uiText("Plano de álbum · seed ", "Album plan · seed ", "Plan d’album · seed ", "Plan de álbum · seed ") + juce::String(manifest.plan.request.seed) +
+                     " · " + juce::String(manifest.count) + uiText(" faixas · ", " tracks · ", " morceaux · ", " piezas · ") +
+                     juce::String(minutes, 1) + uiText(" min previstos", " min estimated", " min estimées", " min estimados"));
         albumReviewDialog = std::make_unique<juce::AlertWindow>(
-            utf8("Revisar plano do álbum"),
-            utf8("Título: ") + juce::String::fromUTF8(manifest.title.c_str()) + "\n" +
-            utf8("Faixas: ") + juce::String(manifest.count) + utf8(" · duração prevista total: ") +
-            juce::String(minutes, 1) + utf8(" min\n\n") + summaries.joinIntoString("\n") +
-            utf8("\n\nEsta etapa cria os projetos .risco. Em Álbum, use Renderizar WAVs para exportar o áudio."),
+            uiText("Revisar plano do álbum", "Review album plan", "Vérifier le plan de l’album", "Revisar plan del álbum"),
+            uiText("Título: ", "Title: ", "Titre : ", "Título: ") + juce::String::fromUTF8(manifest.title.c_str()) + "\n" +
+            uiText("Faixas: ", "Tracks: ", "Morceaux : ", "Piezas: ") + juce::String(manifest.count) + uiText(" · duração prevista total: ", " · estimated total duration: ", " · durée totale estimée : ", " · duración total estimada: ") +
+            juce::String(minutes, 1) + " min\n" +
+            (manifest.plan.request.arrangeByParts
+                ? uiText("Arranjo por partes em cada faixa", "Arrangement by parts in each track",
+                         "Arrangement par sections dans chaque morceau", "Arreglo por secciones en cada pista")
+                : uiText("Arranjo contínuo", "Continuous arrangement", "Arrangement continu", "Arreglo continuo")) +
+            "\n" + sourceSummary + "\n" + summaries.joinIntoString("\n") +
+            uiText("\n\nEsta etapa cria os projetos .risco. Em Álbum, use Renderizar WAVs para exportar o áudio.",
+                   "\n\nThis step creates the .risco projects. Use Album → Render WAVs to export audio.",
+                   "\n\nCette étape crée les projets .risco. Utilisez Album → Rendre les WAV pour exporter l’audio.",
+                   "\n\nEste paso crea los proyectos .risco. Use Álbum → Renderizar WAVs para exportar el audio."),
             juce::MessageBoxIconType::QuestionIcon);
         albumReviewDialog->addButton(uiText("Escolher pasta e gerar", "Choose folder and generate", "Choisir un dossier et générer", "Elegir carpeta y generar"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
@@ -6150,7 +6554,7 @@ private:
                 safeThis->pendingAlbumManifest = std::make_unique<risco::AlbumManifest>(std::move(manifest));
                 const auto initial = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
                 safeThis->fileChooser = std::make_unique<juce::FileChooser>(
-                    utf8("Escolher pasta-pai para o álbum"), initial, "");
+                    safeThis->uiText("Escolher pasta-pai para o álbum", "Choose parent folder for the album", "Choisir le dossier parent de l’album", "Elegir carpeta principal del álbum"), initial, "");
                 safeThis->fileChooser->launchAsync(juce::FileBrowserComponent::openMode |
                     juce::FileBrowserComponent::canSelectDirectories,
                     [safeThis](const juce::FileChooser& chooser) {
@@ -6158,7 +6562,11 @@ private:
                             !safeThis->pendingAlbumManifest) return;
                         const auto parent = chooser.getResult();
                         if (!parent.isDirectory() || parent.getBytesFreeOnVolume() < 64 * 1024 * 1024) {
-                            safeThis->status.setText(utf8("Escolha uma pasta gravável com pelo menos 64 MiB livres."),
+                            safeThis->status.setText(safeThis->uiText(
+                                "Escolha uma pasta gravável com pelo menos 64 MiB livres.",
+                                "Choose a writable folder with at least 64 MiB free.",
+                                "Choisissez un dossier accessible en écriture avec au moins 64 Mio libres.",
+                                "Elija una carpeta escribible con al menos 64 MiB libres."),
                                                      juce::dontSendNotification);
                             safeThis->pendingAlbumManifest.reset();
                             return;
@@ -6170,15 +6578,8 @@ private:
                         safeThis->pendingAlbumManifest.reset();
                         if (safeThis->albumRenderJob && safeThis->albumRenderJob->isThreadRunning()) return;
                         if (directory.exists()) {
-                            const auto manifestFile = directory.getChildFile("album.risco-manifest");
-                            juce::MemoryBlock bytes;
                             risco::AlbumManifest recovered;
-                            bool valid = directory.isDirectory() && manifestFile.getSize() > 0 &&
-                                manifestFile.getSize() <= 1024 * 1024 && manifestFile.loadFileAsData(bytes);
-                            if (valid) {
-                                std::istringstream input(std::string(static_cast<const char*>(bytes.getData()), bytes.getSize()));
-                                valid = risco::loadAlbumManifest(input, recovered);
-                            }
+                            bool valid = safeThis->readAlbumFolder(directory, recovered);
                             const auto& requested = manifest.plan;
                             const auto& saved = recovered.plan;
                             valid = valid && recovered.title == manifest.title &&
@@ -6188,58 +6589,96 @@ private:
                                 saved.request.tempoSpread == requested.request.tempoSpread &&
                                 saved.request.contour == requested.request.contour &&
                                 saved.request.profile == requested.request.profile &&
+                                saved.request.trackProfiles == requested.request.trackProfiles &&
+                                saved.request.arrangeByParts == requested.request.arrangeByParts &&
+                                saved.request.source == requested.request.source &&
                                 saved.count == requested.count;
                             for (int index = 0; valid && index < saved.count; ++index)
                                 valid = saved.tracks[static_cast<size_t>(index)] ==
                                         requested.tracks[static_cast<size_t>(index)];
                             if (!valid) {
-                                safeThis->status.setText(utf8("A pasta contém um álbum incompatível ou inválido; nenhum arquivo foi alterado."),
+                                safeThis->status.setText(safeThis->uiText(
+                                    "A pasta contém um álbum incompatível ou inválido; nenhum arquivo foi alterado.",
+                                    "The folder contains an invalid or incompatible album; no files were changed.",
+                                    "Le dossier contient un album invalide ou incompatible ; aucun fichier n’a été modifié.",
+                                    "La carpeta contiene un álbum incompatible o no válido; no se modificó ningún archivo."),
                                                          juce::dontSendNotification);
                                 return;
                             }
                             manifest = std::move(recovered);
                         } else if (!directory.createDirectory().wasOk()) {
-                            safeThis->status.setText(utf8("Não foi possível criar a pasta do álbum."), juce::dontSendNotification);
+                            safeThis->status.setText(safeThis->uiText(
+                                "Não foi possível criar a pasta do álbum.",
+                                "Could not create the album folder.",
+                                "Impossible de créer le dossier de l’album.",
+                                "No se pudo crear la carpeta del álbum."), juce::dontSendNotification);
                             return;
                         }
-                        safeThis->showActivity(utf8("Gerando ") + juce::String(manifest.count) +
-                                               utf8(" projetos .risco · ") + directory.getFileName());
-                        safeThis->lastAlbumDirectory = directory;
-                        safeThis->albumJob = std::make_unique<AlbumGenerationJob>(
-                            std::move(manifest), directory);
-                        safeThis->albumJob->completed = [safeThis](juce::String result) {
-                            if (safeThis) safeThis->showActivity(result);
-                        };
-                        safeThis->albumJob->launchThread(juce::Thread::Priority::low);
+                        safeThis->startAlbumProjects(std::move(manifest), directory);
                     });
             }), false);
     }
-    void openAlbumRenderChooser() {
+    static bool readAlbumFolder(const juce::File& directory, risco::AlbumManifest& manifest) {
+        if (!directory.isDirectory()) return false;
+        const auto manifestFile = directory.getChildFile("album.risco-manifest");
+        const auto size = manifestFile.getSize();
+        juce::MemoryBlock bytes;
+        if (size <= 0 || size > 1024 * 1024 || !manifestFile.loadFileAsData(bytes)) return false;
+        std::istringstream input(std::string(static_cast<const char*>(bytes.getData()), bytes.getSize()));
+        return risco::loadAlbumManifest(input, manifest);
+    }
+
+    void startAlbumProjects(risco::AlbumManifest manifest, const juce::File& directory) {
+        if ((albumJob && albumJob->isThreadRunning()) ||
+            (albumRenderJob && albumRenderJob->isThreadRunning())) return;
+        if (directory.getBytesFreeOnVolume() < 64 * 1024 * 1024) {
+            status.setText(uiText("São necessários 64 MiB livres na pasta do álbum.",
+                                 "The album folder needs 64 MiB of free space.",
+                                 "Le dossier de l’album nécessite 64 Mio d’espace libre.",
+                                 "La carpeta del álbum necesita 64 MiB libres."), juce::dontSendNotification);
+            return;
+        }
+        showActivity(uiText("Preparando ", "Preparing ", "Préparation de ", "Preparando ") +
+            juce::String(manifest.count) + uiText(" projetos .risco · ", " .risco projects · ",
+            " projets .risco · ", " proyectos .risco · ") + directory.getFileName());
+        lastAlbumDirectory = directory;
+        albumJob = std::make_unique<AlbumGenerationJob>(
+            std::move(manifest), directory, languageSelect.getSelectedId() - 1);
+        juce::Component::SafePointer<MainComponent> safeThis(this);
+        albumJob->completed = [safeThis](juce::String result) {
+            if (safeThis) safeThis->showActivity(result);
+        };
+        albumJob->launchThread(juce::Thread::Priority::low);
+    }
+
+    void openAlbumFolderChooser(bool resumeProjects = false) {
         if ((albumRenderJob && albumRenderJob->isThreadRunning()) ||
             (albumJob && albumJob->isThreadRunning())) return;
         const auto initial = lastAlbumDirectory.isDirectory() ? lastAlbumDirectory
             : juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
-        showActivity(utf8("Escolha a pasta que contém album.risco-manifest"));
+        showActivity(uiText("Escolha a pasta que contém album.risco-manifest", "Choose the folder containing album.risco-manifest", "Choisissez le dossier contenant album.risco-manifest", "Elija la carpeta que contiene album.risco-manifest"));
         fileChooser = std::make_unique<juce::FileChooser>(
-            utf8("Escolher pasta do álbum com album.risco-manifest"), initial, "", true, false, this);
+            uiText("Escolher pasta do álbum com album.risco-manifest", "Choose album folder with album.risco-manifest", "Choisir le dossier de l’album avec album.risco-manifest", "Elegir carpeta del álbum con album.risco-manifest"), initial, "", true, false, this);
         juce::Component::SafePointer<MainComponent> safeThis(this);
         fileChooser->launchAsync(juce::FileBrowserComponent::openMode |
             juce::FileBrowserComponent::canSelectDirectories,
-            [safeThis](const juce::FileChooser& chooser) {
+            [safeThis, resumeProjects](const juce::FileChooser& chooser) {
                 if (!safeThis) return;
                 if (chooser.getResult() == juce::File()) {
-                    safeThis->showActivity(utf8("Seleção de pasta cancelada"));
+                    safeThis->showActivity(safeThis->uiText("Seleção de pasta cancelada", "Folder selection cancelled", "Sélection du dossier annulée", "Selección de carpeta cancelada"));
                     return;
                 }
                 const auto directory = chooser.getResult();
-                const auto manifestFile = directory.getChildFile("album.risco-manifest");
-                juce::MemoryBlock bytes;
                 risco::AlbumManifest manifest;
-                bool valid = directory.isDirectory() && manifestFile.getSize() > 0 &&
-                    manifestFile.getSize() <= 1024 * 1024 && manifestFile.loadFileAsData(bytes);
-                if (valid) {
-                    std::istringstream input(std::string(static_cast<const char*>(bytes.getData()), bytes.getSize()));
-                    valid = risco::loadAlbumManifest(input, manifest);
+                bool valid = safeThis->readAlbumFolder(directory, manifest);
+                if (resumeProjects) {
+                    if (valid) safeThis->startAlbumProjects(std::move(manifest), directory);
+                    else safeThis->showActivity(safeThis->uiText(
+                        "Retomada indisponível. Escolha uma pasta com um manifesto de álbum válido.",
+                        "Resume unavailable. Choose a folder with a valid album manifest.",
+                        "Reprise indisponible. Choisissez un dossier avec un manifeste d’album valide.",
+                        "Reanudación no disponible. Elija una carpeta con un manifiesto de álbum válido."));
+                    return;
                 }
                 for (int index = 0; valid && index < manifest.count; ++index) {
                     const auto& track = manifest.tracks[static_cast<size_t>(index)];
@@ -6248,97 +6687,448 @@ private:
                          track.state == risco::AlbumTrackState::rendered);
                 }
                 if (!valid) {
-                    safeThis->showActivity(utf8("Render não iniciado · manifesto inválido ou projetos ausentes"));
-                    safeThis->status.setText(utf8("Manifesto inválido ou há faixas sem projeto; gere/retome os projetos antes do WAV."),
+                    safeThis->showActivity(safeThis->uiText("Render não iniciado · manifesto inválido ou projetos ausentes", "Render not started · invalid manifest or missing projects", "Rendu non démarré · manifeste invalide ou projets manquants", "Render no iniciado · manifiesto no válido o faltan proyectos"));
+                    safeThis->status.setText(safeThis->uiText("Manifesto inválido ou há faixas sem projeto; gere/retome os projetos antes do WAV.", "Invalid manifest or tracks without projects; generate or resume the projects before rendering WAVs.", "Manifeste invalide ou morceaux sans projet ; générez ou reprenez les projets avant le rendu WAV.", "Manifiesto no válido o piezas sin proyecto; genere o reanude los proyectos antes de renderizar WAV."),
                                              juce::dontSendNotification);
                     return;
                 }
                 if (safeThis->albumJob && safeThis->albumJob->isThreadRunning()) return;
                 if (directory.getBytesFreeOnVolume() < 5000000000LL) {
-                    safeThis->showActivity(utf8("Render não iniciado · espaço insuficiente"));
-                    safeThis->status.setText(utf8("Mantenha pelo menos 5 GB livres além do espaço estimado dos renders."),
+                    safeThis->showActivity(safeThis->uiText("Render não iniciado · espaço insuficiente", "Render not started · insufficient free space", "Rendu non démarré · espace libre insuffisant", "Render no iniciado · espacio libre insuficiente"));
+                    safeThis->status.setText(safeThis->uiText("Mantenha pelo menos 5 GB livres além do espaço estimado dos renders.", "Keep at least 5 GB free beyond the estimated render size.", "Gardez au moins 5 Go libres en plus de la taille estimée des rendus.", "Mantenga al menos 5 GB libres además del tamaño estimado de los renders."),
                                              juce::dontSendNotification);
                     return;
                 }
-                safeThis->showActivity(utf8("Preparando render · ") + juce::String(manifest.count) + " faixas");
+                safeThis->showActivity(safeThis->uiText("Preparando render · ", "Preparing render · ", "Préparation du rendu · ", "Preparando render · ") + juce::String(manifest.count) + safeThis->uiText(" faixas", " tracks", " morceaux", " piezas"));
                 safeThis->lastAlbumDirectory = directory;
-                safeThis->status.setText(utf8("Pasta do álbum · ") + directory.getFullPathName(),
+                safeThis->status.setText(safeThis->uiText("Pasta do álbum · ", "Album folder · ", "Dossier de l’album · ", "Carpeta del álbum · ") + directory.getFullPathName(),
                                          juce::dontSendNotification);
                 safeThis->albumRenderJob = std::make_unique<AlbumRenderJob>(
-                    std::move(manifest), directory, safeThis.getComponent());
+                    std::move(manifest), directory, safeThis.getComponent(),
+                    safeThis->languageSelect.getSelectedId() - 1);
                 safeThis->albumRenderJob->completed = [safeThis](juce::String result) {
                     if (safeThis) safeThis->showActivity(result);
                 };
                 safeThis->albumRenderJob->launchThread(juce::Thread::Priority::low);
             });
     }
+    static std::uint64_t freshSeedTrackSeed(std::uint64_t materialSeed, std::uint64_t previous = 0) {
+        auto& random = juce::Random::getSystemRandom();
+        const auto high = static_cast<std::uint32_t>(random.nextInt());
+        const auto low = static_cast<std::uint32_t>(random.nextInt());
+        const auto nonce = (static_cast<std::uint64_t>(high) << 32u) | low;
+        auto seed = materialSeed == 0 ? nonce :
+            risco::formulaSeedFromText(std::to_string(materialSeed) + ":" + std::to_string(nonce));
+        if (seed == 0) seed = 1;
+        if (seed == previous) seed = (seed == std::numeric_limits<std::uint64_t>::max()) ? 1 : seed + 1;
+        return seed;
+    }
+
     void openSeedTrackDialog() {
         seedTrackDialog = std::make_unique<juce::AlertWindow>(
-            utf8("Gerar faixa completa por seed"),
-            utf8("Cria um novo projeto de 64 compassos, com melodia, harmonia e baixo em stems separados. A composição aberta só será trocada depois de salvar e reabrir o novo arquivo."),
+            uiText("Gerar faixa completa", "Generate a full track", "Générer un morceau complet", "Generar pieza completa"),
+            uiText("Gera uma faixa editável em cinco canais. Com Texto ou Desenho como origem, a faixa apresenta e retoma um motivo da inscrição. Ouça a proposta antes de salvar.",
+                   "Generates an editable track with five channels. With Text or Drawing as the source, the track introduces and reprises a motif from it. Preview the proposal before saving.",
+                   "Génère un morceau modifiable à cinq pistes. Avec Texte ou Dessin comme source, le morceau présente et reprend un motif de l’inscription. Écoutez la proposition avant de sauvegarder.",
+                   "Genera una pieza editable en cinco canales. Con Texto o Dibujo como origen, la pieza presenta y retoma un motivo de la inscripción. Escucha la propuesta antes de guardar."),
             juce::MessageBoxIconType::NoIcon);
         auto defaultSeed = static_cast<std::uint64_t>(juce::Time::getCurrentTime().toMilliseconds());
-        auto seedLabel = utf8("Seed sugerida:");
+        auto seedLabel = uiText("Seed sugerida:", "Suggested seed:", "Seed suggérée :", "Seed sugerida:");
         const auto source = seedSource.getSelectedId();
+        auto material = risco::SeedTrackMaterial::none;
+        auto cue = risco::SeedTrackCue::none;
+        risco::SeedTrackMotif motif;
         if (source == 2 && ascii.getText().isNotEmpty()) {
-            defaultSeed = risco::formulaSeedFromText(ascii.getText().toStdString());
-            seedLabel = utf8("Seed do texto:");
+            const auto input = ascii.getText().toStdString();
+            defaultSeed = risco::formulaSeedFromText(input);
+            material = risco::SeedTrackMaterial::text;
+            cue = risco::seedTrackTextCue(input);
+            motif = risco::seedTrackMotif(risco::composeText(input));
+            seedLabel = uiText("Origem do texto:", "Text source:", "Source texte :", "Origen del texto:");
         } else if (source == 3 && inscription.count > 0) {
             defaultSeed = risco::formulaSeedFromDrawing(inscription);
-            seedLabel = utf8("Seed do desenho:");
+            material = risco::SeedTrackMaterial::drawing;
+            cue = risco::seedTrackDrawingCue(inscription);
+            motif = risco::seedTrackMotif(risco::compose(inscription));
+            seedLabel = uiText("Origem do desenho:", "Drawing source:", "Source dessin :", "Origen del dibujo:");
         }
         seedTrackDialog->addTextEditor("seed", juce::String(std::max(std::uint64_t{1}, defaultSeed)), seedLabel);
         if (auto* editor = seedTrackDialog->getTextEditor("seed"))
             editor->setInputRestrictions(20, "0123456789");
-        seedTrackDialog->addComboBox("form", {utf8("Retorno do tema"), utf8("Colagem e rupturas")}, utf8("Forma:"));
+        seedTrackDialog->addComboBox("form", {
+            uiText("Retorno do tema", "Theme return", "Retour du thème", "Retorno del tema"),
+            uiText("Colagem e rupturas", "Collage and breaks", "Collage et ruptures", "Collage y rupturas")},
+            uiText("Forma:", "Form:", "Forme :", "Forma:"));
         seedTrackDialog->getComboBoxComponent("form")->setSelectedId(1, juce::dontSendNotification);
-        seedTrackDialog->addComboBox("surprise", {utf8("Contida"), utf8("Média"), utf8("Alta")}, utf8("Surpresa:"));
+        seedTrackDialog->addComboBox("arrangement", {
+            uiText("Por partes", "By parts", "Par sections", "Por secciones"),
+            uiText("Contínuo", "Continuous", "Continu", "Continuo")},
+            uiText("Arranjo:", "Arrangement:", "Arrangement :", "Arreglo:"));
+        seedTrackDialog->getComboBoxComponent("arrangement")->setSelectedId(1, juce::dontSendNotification);
+        seedTrackDialog->addComboBox("surprise", {
+            uiText("Contida", "Restrained", "Contenue", "Contenida"),
+            uiText("Média", "Medium", "Moyenne", "Media"),
+            uiText("Alta", "High", "Élevée", "Alta")},
+            uiText("Surpresa:", "Surprise:", "Surprise :", "Sorpresa:"));
         seedTrackDialog->getComboBoxComponent("surprise")->setSelectedId(2, juce::dontSendNotification);
+        seedTrackDialog->addComboBox("motifReturn", {
+            uiText("Automático · pela surpresa", "Automatic · from surprise", "Automatique · selon la surprise", "Automático · según la sorpresa"),
+            uiText("Literal", "Literal", "Littéral", "Literal"),
+            uiText("Espelho", "Mirror", "Miroir", "Espejo"),
+            uiText("Espelho + retrógrado", "Mirror + retrograde", "Miroir + rétrograde", "Espejo + retrógrado")},
+            uiText("Retorno do motivo:", "Motif return:", "Retour du motif :", "Retorno del motivo:"));
+        seedTrackDialog->getComboBoxComponent("motifReturn")->setSelectedId(1, juce::dontSendNotification);
+        seedTrackDialog->getComboBoxComponent("motifReturn")->setEnabled(motif.count > 0);
+        seedTrackDialog->addComboBox("duration", {
+            uiText("Breve · 32", "Short · 32", "Court · 32", "Breve · 32"),
+            uiText("Média · 64", "Medium · 64", "Moyen · 64", "Media · 64"),
+            uiText("Longa · 80", "Long · 80", "Long · 80", "Larga · 80")},
+            uiText("Duração:", "Length:", "Durée :", "Duración:"));
+        seedTrackDialog->getComboBoxComponent("duration")->setSelectedId(2, juce::dontSendNotification);
+        seedTrackDialog->addComboBox("pulse", {
+            uiText("Reto", "Straight", "Droit", "Recto"),
+            uiText("Balanço", "Swing", "Swing", "Swing"),
+            uiText("Cortado", "Cut", "Coupé", "Cortado")},
+            uiText("Pulso:", "Pulse:", "Pulsation :", "Pulso:"));
+        seedTrackDialog->getComboBoxComponent("pulse")->setSelectedId(1, juce::dontSendNotification);
+        seedTrackDialog->addComboBox("palette", {
+            uiText("Original", "Original", "Original", "Original"),
+            uiText("Ressonante", "Resonant", "Résonante", "Resonante"),
+            uiText("Chip", "Chip", "Chip", "Chip"),
+            uiText("Grão", "Grain", "Grain", "Grano")},
+            uiText("Paleta:", "Palette:", "Palette :", "Paleta:"));
+        seedTrackDialog->getComboBoxComponent("palette")->setSelectedId(1, juce::dontSendNotification);
         seedTrackDialog->addButton(uiText("Gerar proposta", "Generate proposal", "Générer une proposition", "Generar propuesta"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
+        seedTrackDialog->addButton(uiText("Nova seed", "New seed", "Nouvelle seed", "Nueva seed"), 2);
         seedTrackDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         seedTrackDialog->enterModalState(true, juce::ModalCallbackFunction::create(
-            [safeThis](int choice) {
+            [safeThis, sourceSeed = defaultSeed, material, cue, motif](int choice) {
                 if (!safeThis || !safeThis->seedTrackDialog) return;
                 const auto text = safeThis->seedTrackDialog->getTextEditorContents("seed").trim().toStdString();
                 const auto* formChoice = safeThis->seedTrackDialog->getComboBoxComponent("form");
+                const auto* arrangementChoice = safeThis->seedTrackDialog->getComboBoxComponent("arrangement");
                 const auto* surpriseChoice = safeThis->seedTrackDialog->getComboBoxComponent("surprise");
+                const auto* motifReturnChoice = safeThis->seedTrackDialog->getComboBoxComponent("motifReturn");
+                const auto* durationChoice = safeThis->seedTrackDialog->getComboBoxComponent("duration");
+                const auto* pulseChoice = safeThis->seedTrackDialog->getComboBoxComponent("pulse");
+                const auto* paletteChoice = safeThis->seedTrackDialog->getComboBoxComponent("palette");
                 risco::SeedTrackOptions options;
+                options.generatorVersion = 2;
                 options.form = formChoice->getSelectedId() == 2
                     ? risco::SeedTrackForm::collage : risco::SeedTrackForm::arc;
+                options.arrangeByParts = arrangementChoice->getSelectedId() == 1;
+                options.material = material;
+                options.materialSeed = material == risco::SeedTrackMaterial::none ? 0 : sourceSeed;
+                options.cue = options.arrangeByParts ? cue : risco::SeedTrackCue::none;
+                options.motif = motif;
+                if (motif.count > 0) options.motifStem = material == risco::SeedTrackMaterial::text ? 0 : 4;
                 options.surprise = surpriseChoice->getSelectedId() - 1;
-                const auto choices = formChoice->getText() + utf8(" · surpresa ") +
-                                     surpriseChoice->getText().toLowerCase();
+                options.motifReturn = static_cast<risco::SeedTrackMotifReturn>(
+                    std::clamp(motifReturnChoice->getSelectedId() - 1, 0, 3));
+                constexpr int durations[] = {32, 64, 80};
+                options.durationBars = durations[std::clamp(durationChoice->getSelectedId() - 1, 0, 2)];
+                options.pulse = static_cast<risco::SeedTrackPulse>(
+                    std::clamp(pulseChoice->getSelectedId() - 1, 0, 2));
+                options.palette = static_cast<risco::SeedTrackPalette>(
+                    std::clamp(paletteChoice->getSelectedId() - 1, 0, 3));
+                const auto choices = formChoice->getText() + utf8(" · ") + arrangementChoice->getText() +
+                    safeThis->uiText(" · surpresa ", " · surprise ", " · surprise ", " · sorpresa ") +
+                    surpriseChoice->getText().toLowerCase() +
+                    safeThis->uiText(" · retorno ", " · return ", " · retour ", " · retorno ") +
+                    motifReturnChoice->getText().toLowerCase() + utf8(" · ") +
+                    pulseChoice->getText() + utf8(" · ") + paletteChoice->getText();
                 safeThis->seedTrackDialog.reset();
-                if (choice != 1) return;
+                if (choice != 1 && choice != 2) return;
                 std::uint64_t seed = 0;
-                const auto parsed = std::from_chars(text.data(), text.data() + text.size(), seed);
-                if (text.empty() || parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() || seed == 0) {
-                    safeThis->status.setText(utf8("Seed inválida; nenhum projeto foi alterado."), juce::dontSendNotification);
-                    return;
+                if (choice == 2) {
+                    seed = freshSeedTrackSeed(options.materialSeed);
+                } else {
+                    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), seed);
+                    if (text.empty() || parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size() || seed == 0) {
+                        safeThis->status.setText(safeThis->uiText("Seed inválida; nenhum projeto foi alterado.", "Invalid seed; no project was changed.", "Seed invalide ; aucun projet modifié.", "Seed no válida; no se cambió ningún proyecto."), juce::dontSendNotification);
+                        return;
+                    }
                 }
-                auto candidate = std::make_shared<risco::Song>();
-                if (!risco::generateSeedTrack(seed, options, *candidate)) {
-                    safeThis->status.setText(utf8("Não foi possível gerar a faixa; a composição aberta continua intacta."),
-                                             juce::dontSendNotification);
-                    return;
-                }
-                safeThis->reviewSeedTrack(candidate, choices);
+                safeThis->showSeedTrackProposal(seed, choices, options, {}, {});
             }), false);
     }
-    void reviewSeedTrack(std::shared_ptr<risco::Song> candidate, const juce::String& choices) {
+    struct SeedTrackProposal {
+        std::shared_ptr<risco::Song> song;
+        risco::SeedTrackOptions options;
+    };
+
+    juce::StringArray seedTrackChannelLabels() {
+        return {
+            uiText("melodia", "melody", "mélodie", "melodía"),
+            uiText("harmonia", "harmony", "harmonie", "armonía"),
+            uiText("baixo", "bass", "basse", "bajo"),
+            uiText("ritmo", "rhythm", "rythme", "ritmo"),
+            uiText("textura", "texture", "texture", "textura")};
+    }
+
+    juce::StringArray seedTrackPartLabels() {
+        return {
+            uiText("Abertura", "Opening", "Ouverture", "Apertura"),
+            uiText("Desenvolvimento", "Development", "Développement", "Desarrollo"),
+            uiText("Quebra", "Break", "Rupture", "Corte"),
+            uiText("Retorno", "Return", "Retour", "Retorno"),
+            uiText("Final", "Ending", "Finale", "Final")};
+    }
+
+    juce::StringArray seedTrackPartDynamicsLabels() {
+        return {
+            uiText("Automática", "Automatic", "Automatique", "Automática"),
+            uiText("Estável", "Steady", "Stable", "Estable"),
+            uiText("Crescendo", "Crescendo", "Crescendo", "Crescendo"),
+            uiText("Diminuendo", "Diminuendo", "Diminuendo", "Diminuendo"),
+            uiText("Arco", "Arch", "Arche", "Arco")};
+    }
+
+    class SeedTrackPartControls final : public juce::Component {
+    public:
+        SeedTrackPartControls(const juce::StringArray& labels, const juce::String& repeatLabel) {
+            for (int stem = 0; stem < risco::Song::stemCount; ++stem) {
+                auto& toggle = channels[static_cast<std::size_t>(stem)];
+                toggle.setButtonText(labels[stem]);
+                addAndMakeVisible(toggle);
+            }
+            repeat.setButtonText(repeatLabel);
+            addAndMakeVisible(repeat);
+            setSize(510, 62);
+        }
+        void setPart(const risco::SeedTrackPart& part) {
+            for (int stem = 0; stem < risco::Song::stemCount; ++stem)
+                channels[static_cast<std::size_t>(stem)].setToggleState(
+                    (part.channels & (1u << stem)) != 0, juce::dontSendNotification);
+            repeat.setToggleState(part.repeatFirst, juce::dontSendNotification);
+        }
+        unsigned mask() const {
+            unsigned selected = 0;
+            for (int stem = 0; stem < risco::Song::stemCount; ++stem)
+                if (channels[static_cast<std::size_t>(stem)].getToggleState()) selected |= 1u << stem;
+            return selected;
+        }
+        bool repeats() const { return repeat.getToggleState(); }
+    private:
+        void resized() override {
+            auto bounds = getLocalBounds();
+            auto row = bounds.removeFromTop(bounds.getHeight() / 2);
+            const int width = row.getWidth() / risco::Song::stemCount;
+            for (auto& toggle : channels) toggle.setBounds(row.removeFromLeft(width));
+            repeat.setBounds(bounds);
+        }
+        std::array<juce::ToggleButton, risco::Song::stemCount> channels;
+        juce::ToggleButton repeat;
+    };
+
+    void openSeedTrackPartEditor(const juce::String& choices, SeedTrackProposal take,
+                                 SeedTrackProposal alternate, int initialPart,
+                                 const juce::String& notice = {}) {
+        if (!take.song) return;
+        const auto seed = take.song->compositionSeed;
+        const auto parts = risco::seedTrackParts(seed, take.options);
+        seedTrackPartDialog = std::make_unique<juce::AlertWindow>(
+            uiText("Editar uma parte", "Edit a part", "Modifier une section", "Editar una sección"),
+            (notice.isEmpty() ? juce::String() : notice + "\n") +
+            uiText("Escolha a parte, marque os canais e ajuste a duração em múltiplos de 4 compassos.",
+                   "Choose a part, select its channels and set the length in multiples of 4 bars.",
+                   "Choisissez une section, cochez ses pistes et réglez la durée par multiples de 4 mesures.",
+                   "Elija una sección, marque los canales y ajuste la duración en múltiplos de 4 compases."),
+            juce::MessageBoxIconType::NoIcon, this);
+        auto& dialog = *seedTrackPartDialog;
+        dialog.addComboBox("part", seedTrackPartLabels(), uiText("Parte:", "Part:", "Section :", "Sección:"));
+        dialog.addTextEditor("bars", {}, uiText("Compassos:", "Bars:", "Mesures :", "Compases:"));
+        dialog.addComboBox("gain", seedTrackPartDynamicsLabels(), uiText("Dinâmica:", "Dynamics:", "Dynamique :", "Dinámica:"));
+        auto* partChoice = dialog.getComboBoxComponent("part");
+        auto* barsEditor = dialog.getTextEditor("bars");
+        auto* gainChoice = dialog.getComboBoxComponent("gain");
+        barsEditor->setInputRestrictions(2, "0123456789");
+        auto controls = std::make_shared<SeedTrackPartControls>(seedTrackChannelLabels(),
+            uiText("Repetir o primeiro bloco de quatro compassos", "Repeat the first four-bar block",
+                   "Répéter le premier bloc de quatre mesures", "Repetir el primer bloque de cuatro compases"));
+        dialog.addCustomComponent(controls.get());
+        for (std::size_t i = 0; i < parts.size(); ++i)
+            partChoice->setItemEnabled(static_cast<int>(i) + 1, parts[i].endBlock > parts[i].firstBlock);
+        partChoice->setSelectedId(initialPart, juce::dontSendNotification);
+        partChoice->onChange = [partChoice, barsEditor, gainChoice, controls, parts, edits = take.options.partEdits] {
+            const auto index = static_cast<std::size_t>(std::max(1, partChoice->getSelectedId()) - 1);
+            const auto& part = parts[index];
+            barsEditor->setText(juce::String((part.endBlock - part.firstBlock) * 4), false);
+            gainChoice->setSelectedId(static_cast<int>(edits[index].dynamics) + 1, juce::dontSendNotification);
+            controls->setPart(part);
+        };
+        partChoice->onChange();
+        dialog.addButton(uiText("Aplicar", "Apply", "Appliquer", "Aplicar"), 1,
+                         juce::KeyPress(juce::KeyPress::returnKey));
+        dialog.addButton(uiText("Restaurar automático", "Restore automatic", "Rétablir l’automatique", "Restaurar automático"), 2);
+        dialog.addButton(uiText("Voltar", "Back", "Retour", "Volver"), 0,
+                         juce::KeyPress(juce::KeyPress::escapeKey));
+        juce::Component::SafePointer<MainComponent> safeThis(this);
+        dialog.enterModalState(true, juce::ModalCallbackFunction::create(
+            [safeThis, choices, seed, parts, controls, take = std::move(take),
+             alternate = std::move(alternate)](int choice) {
+                if (!safeThis || !safeThis->seedTrackPartDialog) return;
+                auto& dialog = *safeThis->seedTrackPartDialog;
+                const int id = dialog.getComboBoxComponent("part")->getSelectedId();
+                const auto bars = dialog.getTextEditorContents("bars").trim().getIntValue();
+                const int gainId = dialog.getComboBoxComponent("gain")->getSelectedId();
+                safeThis->seedTrackPartDialog.reset();
+                if (choice == 0 || id < 1 || id > int(parts.size())) {
+                    safeThis->reviewSeedTrack(take, choices, std::move(alternate));
+                    return;
+                }
+
+                const auto index = static_cast<std::size_t>(id - 1);
+                const auto& part = parts[index];
+                auto revised = take.options;
+                auto& edit = revised.partEdits[index];
+                if (choice == 2) {
+                    edit = {};
+                } else if (bars < 4 || bars > risco::seedTrackMaxBars || bars % 4 != 0 || controls->mask() == 0) {
+                    safeThis->openSeedTrackPartEditor(choices, take, std::move(alternate), id,
+                        safeThis->uiText("Marque pelo menos um canal e use um múltiplo de 4 compassos.",
+                            "Select at least one channel and use a multiple of 4 bars.",
+                            "Cochez au moins une piste et utilisez un multiple de 4 mesures.",
+                            "Marque al menos un canal y use un múltiplo de 4 compases."));
+                    return;
+                } else {
+                    if (bars != (part.endBlock - part.firstBlock) * 4) edit.blocks = bars / 4;
+                    if (controls->mask() != part.channels) edit.channels = controls->mask();
+                    edit.dynamics = static_cast<risco::SeedTrackPartDynamics>(std::clamp(gainId - 1, 0, 4));
+                    edit.repeatFirst = controls->repeats();
+                }
+                const int totalBars = risco::seedTrackParts(seed, revised).back().endBlock * 4;
+                if (totalBars < risco::seedTrackMinBars || totalBars > risco::seedTrackMaxBars) {
+                    safeThis->openSeedTrackPartEditor(choices, take, std::move(alternate), id,
+                        safeThis->uiText("A faixa precisa ter entre 16 e 84 compassos.",
+                            "The track must have between 16 and 84 bars.",
+                            "Le morceau doit comporter entre 16 et 84 mesures.",
+                            "La pieza debe tener entre 16 y 84 compases."));
+                    return;
+                }
+                const auto& before = take.options.partEdits[index];
+                if (edit.blocks == before.blocks && edit.channels == before.channels &&
+                    edit.dynamics == before.dynamics && edit.repeatFirst == before.repeatFirst) {
+                    safeThis->reviewSeedTrack(take, choices, std::move(alternate));
+                    return;
+                }
+                safeThis->showSeedTrackProposal(seed, choices, revised, take, std::move(alternate));
+            }), false);
+    }
+
+    void showSeedTrackProposal(std::uint64_t seed, const juce::String& choices,
+                               const risco::SeedTrackOptions& options,
+                               SeedTrackProposal previous, SeedTrackProposal previousAlternate) {
+        auto generationOptions = options;
+        generationOptions.motifReturnStem = risco::alternateMotifStem(seed, options.motifStem);
+        auto candidate = std::make_shared<risco::Song>();
+        if (!risco::generateSeedTrack(seed, generationOptions, *candidate)) {
+            const auto error = uiText("Não foi possível gerar a faixa.", "Could not generate the track.",
+                                      "Impossible de générer le morceau.", "No se pudo generar la pieza.");
+            if (previous.song)
+                reviewSeedTrack(std::move(previous), choices, std::move(previousAlternate), error);
+            status.setText(error, juce::dontSendNotification);
+            return;
+        }
+        reviewSeedTrack({std::move(candidate), generationOptions}, choices, std::move(previous));
+    }
+
+    void reviewSeedTrack(SeedTrackProposal take, const juce::String& choices,
+                         SeedTrackProposal alternate, const juce::String& notice = {}) {
+        const auto candidate = take.song;
+        const auto& options = take.options;
         if (!candidate) return;
         showActivity(utf8("Faixa gerada · seed ") + juce::String(candidate->compositionSeed) +
                      " · " + choices);
+        juce::String arrangement;
+        const auto channels = seedTrackChannelLabels();
+        const auto parts = risco::seedTrackParts(candidate->compositionSeed, options);
+        const int durationBars = options.arrangeByParts ? parts.back().endBlock * 4 : options.durationBars;
+        if (options.motifStem >= 0) {
+            const auto& returnPart = parts[static_cast<std::size_t>(risco::SeedTrackPartName::returnSection)];
+            const auto motifVoice = [&channels](int stem, unsigned active) -> juce::String {
+                return stem >= 0 && (active & (1u << stem)) != 0 ? channels[stem] : utf8("—");
+            };
+            arrangement += uiText("Motivo · ", "Motif · ", "Motif · ", "Motivo · ") +
+                motifVoice(options.motifStem, parts.front().channels) + utf8(" → ") +
+                motifVoice(options.motifReturnStem,
+                    options.arrangeByParts ? returnPart.channels : parts.front().channels) + "\n";
+            const auto returnTransform = options.motifReturn != risco::SeedTrackMotifReturn::automatic
+                ? options.motifReturn
+                : options.surprise <= 0 ? risco::SeedTrackMotifReturn::literal
+                : options.surprise == 1 ? risco::SeedTrackMotifReturn::mirror
+                                        : risco::SeedTrackMotifReturn::mirrorRetrograde;
+            if (options.generatorVersion >= 2 && returnTransform != risco::SeedTrackMotifReturn::literal)
+                arrangement += returnTransform == risco::SeedTrackMotifReturn::mirrorRetrograde
+                    ? uiText("Retorno do motivo · espelho e ordem retrógrada\n",
+                             "Motif return · inverted and retrograde\n",
+                             "Retour du motif · inversé et rétrograde\n",
+                             "Retorno del motivo · invertido y retrógrado\n")
+                    : uiText("Retorno do motivo · espelho do contorno\n",
+                             "Motif return · mirrored contour\n",
+                             "Retour du motif · contour inversé\n",
+                             "Retorno del motivo · contorno invertido\n");
+        }
+        if (options.arrangeByParts) {
+            const auto names = seedTrackPartLabels();
+            const auto dynamics = seedTrackPartDynamicsLabels();
+            for (const auto& part : parts) {
+                if (part.endBlock <= part.firstBlock) continue;
+                juce::StringArray active;
+                for (int stem = 0; stem < risco::Song::stemCount; ++stem)
+                    if ((part.channels & (1u << stem)) != 0) active.add(channels[stem]);
+                arrangement += names[static_cast<int>(part.name)] + " " +
+                    juce::String(part.firstBlock * 4 + 1) + utf8("–") + juce::String(part.endBlock * 4) +
+                    utf8(" · ") + active.joinIntoString(", ");
+                if (part.repeatFirst)
+                    arrangement += uiText(" · repetição", " · repeat", " · répétition", " · repetición");
+                const auto gain = options.partEdits[static_cast<std::size_t>(part.name)].dynamics;
+                if (gain != risco::SeedTrackPartDynamics::automatic)
+                    arrangement += utf8(" · ") + dynamics[static_cast<int>(gain)].toLowerCase();
+                arrangement += "\n";
+            }
+            switch (options.cue) {
+                case risco::SeedTrackCue::none: break;
+                case risco::SeedTrackCue::breath:
+                    arrangement += uiText("Pontuação do texto · pausa antes do retorno\n", "Text punctuation · pause before the return\n",
+                        "Ponctuation du texte · pause avant le retour\n", "Puntuación del texto · pausa antes del retorno\n");
+                    break;
+                case risco::SeedTrackCue::rise:
+                    if (options.partEdits[1].dynamics == risco::SeedTrackPartDynamics::automatic)
+                        arrangement += uiText("Traço ascendente · crescendo no desenvolvimento\n", "Rising stroke · crescendo in development\n",
+                        "Trait ascendant · crescendo dans le développement\n", "Trazo ascendente · crescendo en el desarrollo\n");
+                    break;
+                case risco::SeedTrackCue::fall:
+                    if (options.partEdits[1].dynamics == risco::SeedTrackPartDynamics::automatic)
+                        arrangement += uiText("Traço descendente · diminuendo no desenvolvimento\n", "Falling stroke · diminuendo in development\n",
+                        "Trait descendant · diminuendo dans le développement\n", "Trazo descendente · diminuendo en el desarrollo\n");
+                    break;
+            }
+        }
+        juce::String comparison;
+        if (alternate.song) {
+            if (alternate.song->compositionSeed == candidate->compositionSeed)
+                comparison = uiText("A/B · outro arranjo da mesma seed\n", "A/B · another arrangement of this seed\n",
+                                    "A/B · autre arrangement de cette graine\n", "A/B · otro arreglo de esta semilla\n");
+            else
+                comparison = uiText("Seed de comparação: ", "Comparison seed: ", "Seed de comparaison : ",
+                                    "Seed de comparación: ") + juce::String(alternate.song->compositionSeed) + "\n";
+        }
         seedTrackReviewDialog = std::make_unique<juce::AlertWindow>(
-            utf8("Revisar faixa gerada"),
+            uiText("Revisar faixa gerada", "Review generated track", "Réviser le morceau généré", "Revisar pieza generada"),
+            (notice.isEmpty() ? juce::String() : notice + "\n") +
             utf8("Seed: ") + juce::String(candidate->compositionSeed) + "\n" +
+            comparison +
             choices + "\n" +
-            utf8("Duração estrutural: 64 compassos · ") + juce::String(candidate->bpm, 1) + " BPM\n" +
-            utf8("Células: 48 · 16 por stem · melodia, harmonia e baixo\n") +
-            utf8("Ouça a proposta antes de salvar. Ao salvar, a faixa abre e toca uma vez."),
+            uiText("Duração estrutural: ", "Structural length: ", "Durée structurelle : ", "Duración estructural: ") +
+            juce::String(durationBars) + uiText(" compassos · ", " bars · ", " mesures · ", " compases · ") +
+            juce::String(candidate->bpm, 1) + " BPM\n" +
+            uiText("Células: ", "Cells: ", "Cellules : ", "Células: ") + juce::String(candidate->cellCount) +
+            "\n" + arrangement +
+            uiText("Ouça a proposta antes de salvar. Ao salvar, a faixa abre e toca uma vez.", "Preview before saving. Saving opens the new track and plays it once.", "Écoutez avant de sauvegarder. La sauvegarde ouvre le morceau et le joue une fois.", "Escucha antes de guardar. Al guardar, la pieza se abre y suena una vez."),
             juce::MessageBoxIconType::QuestionIcon, this);
         seedTrackReviewDialog->addButton(uiText("Ouvir prévia", "Play preview", "Écouter l’aperçu", "Oír vista previa"), 0);
         seedTrackReviewDialog->getButton(0)->onClick = [this, candidate] {
@@ -6370,11 +7160,17 @@ private:
         };
         seedTrackReviewDialog->addButton(uiText("Salvar e tocar uma vez…", "Save and play once…", "Sauver et jouer une fois…", "Guardar y tocar una vez…"), 1,
             juce::KeyPress(juce::KeyPress::returnKey));
+        seedTrackReviewDialog->addButton(uiText("Nova seed", "New seed", "Nouvelle seed", "Nueva seed"), 2);
+        if (alternate.song)
+            seedTrackReviewDialog->addButton(uiText("Trocar A/B", "Swap A/B", "Basculer A/B", "Cambiar A/B"), 3);
+        if (options.arrangeByParts)
+            seedTrackReviewDialog->addButton(uiText("Editar partes…", "Edit parts…", "Modifier les sections…", "Editar secciones…"), 4);
         seedTrackReviewDialog->addButton(uiText("Cancelar", "Cancel", "Annuler", "Cancelar"), 0,
             juce::KeyPress(juce::KeyPress::escapeKey));
         juce::Component::SafePointer<MainComponent> safeThis(this);
         seedTrackReviewDialog->enterModalState(true, juce::ModalCallbackFunction::create(
-            [safeThis, candidate = std::move(candidate)](int choice) {
+            [safeThis, take = std::move(take), choices,
+             alternate = std::move(alternate)](int choice) {
                 if (!safeThis) return;
                 std::unique_ptr<SeedTrackPreview> finished;
                 {
@@ -6383,6 +7179,21 @@ private:
                     safeThis->seedTrackPreviewPlaying.store(false, std::memory_order_relaxed);
                 }
                 safeThis->seedTrackReviewDialog.reset();
+                finished.reset();
+                const auto candidate = take.song;
+                if (choice == 2) {
+                    const auto seed = freshSeedTrackSeed(take.options.materialSeed, candidate->compositionSeed);
+                    safeThis->showSeedTrackProposal(seed, choices, take.options, take, std::move(alternate));
+                    return;
+                }
+                if (choice == 3 && alternate.song) {
+                    safeThis->reviewSeedTrack(std::move(alternate), choices, take);
+                    return;
+                }
+                if (choice == 4) {
+                    safeThis->openSeedTrackPartEditor(choices, take, std::move(alternate), 1);
+                    return;
+                }
                 if (choice != 1) {
                     safeThis->showActivity(utf8("Proposta de faixa descartada"));
                     return;
@@ -6415,7 +7226,7 @@ private:
                             return;
                         }
                         if (safeThis->loadFromFile(file)) {
-                            safeThis->playArrangement();
+                            if (!safeThis->playArrangement()) return;
                             safeThis->showActivity(utf8("Faixa salva · ") + file.getFileName());
                         }
                     });
@@ -6629,6 +7440,25 @@ private:
         status.setText(utf8("Célula retirada da grade; permanece no banco."), juce::dontSendNotification);
         repaint();
     }
+    std::uint64_t routingSeedForCell(const risco::Cell& cell) const noexcept {
+        if (cell.phraseSeed != 0) return cell.phraseSeed ^
+            (std::uint64_t(cell.phraseVariation) * 0x9e3779b97f4a7c15ULL);
+        if (cell.inscription.count > 0) return risco::formulaSeedFromDrawing(cell.inscription);
+        if (!cell.inscription.ascii.empty()) return risco::formulaSeedFromText(cell.inscription.ascii);
+        if (!cell.formulaExpression.empty()) return risco::formulaSeedFromText(cell.formulaExpression);
+        return cell.id;
+    }
+    risco::CellRole generativeRoleForCell(const risco::Cell& cell,
+                                          std::uint64_t seed) const noexcept {
+        const auto profile = risco::describeCellAudio(cell, song.bpm, song.beatsPerBar);
+        if (profile.restLike) return risco::CellRole::texture;
+        if (profile.hasEvents && profile.eventsPerBar >= 5.0f) return risco::CellRole::pulse;
+        if (profile.hasEvents && profile.meanMidi < 54.0f) return risco::CellRole::bass;
+        if (profile.hasEvents && profile.meanMidi >= 70.0f) return risco::CellRole::melody;
+        constexpr risco::CellRole middleRoles[] = {
+            risco::CellRole::harmony, risco::CellRole::texture, risco::CellRole::melody};
+        return middleRoles[static_cast<std::size_t>(seed % 3u)];
+    }
     void placeSelectedCell() {
         const int index = selectedCellIndex();
         const auto value = startBeat.getText();
@@ -6645,6 +7475,20 @@ private:
                          cellSpan.getSelectedId() == 3 ? risco::CellSpan::fourBars : risco::CellSpan::bar;
         placement.repeats = repetitions.getSelectedId();
         placement.stem = pendingStem;
+        bool usedGenerativeRoute = false;
+        if (autoRouteButton.getToggleState()) {
+            const auto suggestion = risco::suggestPlacement(song, placement.cellId,
+                placement.span, placement.repeats, placement.startBeat, true,
+                routingSeedForCell(song.bank[static_cast<size_t>(index)]));
+            if (!suggestion.valid) {
+                status.setText(utf8("AUTO não encontrou uma entrada livre a partir do tempo indicado. Ajuste Tempo inicial ou desligue AUTO para inserir no tempo e STEM escolhidos."),
+                               juce::dontSendNotification);
+                return;
+            }
+            placement.startBeat = suggestion.startBeat;
+            placement.stem = suggestion.stem;
+            usedGenerativeRoute = true;
+        }
         const auto before = captureGridState();
         if (!risco::placeCell(song, placement)) {
             status.setText(utf8("Não foi possível colar: confira posição e limite da grade."),
@@ -6656,7 +7500,10 @@ private:
         ensurePlacementVisible(selectedPlacement);
         startBeat.setText(juce::String(std::min(4096, placement.startBeat + placementBeats(placement))));
         refreshPlaybackAfterGridEdit();
-        status.setText(utf8("Célula colocada no STEM ") + juce::String(pendingStem + 1) + ".",
+        status.setText((usedGenerativeRoute ? utf8("O Risco escolheu a entrada · STEM ")
+                                            : utf8("Célula colocada no STEM ")) +
+                       juce::String(placement.stem + 1) +
+                       (usedGenerativeRoute ? utf8(" · posição e canal derivados da entrada e da grade.") : "."),
                        juce::dontSendNotification);
         repaint();
     }
@@ -6731,17 +7578,20 @@ private:
             status.setText(utf8("Ouvindo célula selecionada, fora da música completa."),
                            juce::dontSendNotification);
     }
-    void playArrangement(bool restartPlayback = true) {
+    bool playArrangement(bool restartPlayback = true) {
+        // Retire snapshots de reproduções anteriores antes do limite. A coleta
+        // só apaga itens inativos quando o callback de áudio não os está lendo.
+        pruneAudioSnapshots();
         if (songSnapshots.size() >= 64) {
             status.setText(utf8("Limite de 64 reproduções nesta sessão; reinicie a maquete."),
                            juce::dontSendNotification);
-            return;
+            return false;
         }
         auto next = std::make_unique<risco::SongPlayback>(risco::prepareSongPlayback(song));
         if (next->count == 0) {
             status.setText(utf8("Grade vazia. Use Faixa completa para gerar uma música ou insira uma célula."),
                            juce::dontSendNotification);
-            return;
+            return false;
         }
         const auto* pointer = next.get();
         songSnapshots.push_back(std::move(next));
@@ -6766,6 +7616,7 @@ private:
                   (pointer->responses[0].harmonicReferenceId > 0 ? utf8(" · harmonia #") + juce::String(pointer->responses[0].harmonicReferenceId) :
                       utf8(" · sem referência harmônica")) : juce::String())
             : utf8("Reproduzindo a grade da música."), juce::dontSendNotification);
+        return true;
     }
     void chooseAudioExport(int selectedStem = -1) {
         if (exportJob && exportJob->isThreadRunning()) return;
@@ -6781,7 +7632,7 @@ private:
             initial = initial.getSiblingFile(initial.getFileNameWithoutExtension() +
                 "-stem-" + juce::String(selectedStem + 1) + ".wav");
         fileChooser = std::make_unique<juce::FileChooser>(
-            selectedStem == -2 ? utf8("Três stems: escolha pasta e nome-base (sem sobrescrever existentes)") :
+            selectedStem == -2 ? utf8("Cinco stems: escolha pasta e nome-base (sem sobrescrever existentes)") :
             selectedStem >= 0 ? utf8("Exportar Stem ") + juce::String(selectedStem + 1) :
                                utf8("Exportar WAV estéreo"), initial, "*.wav");
         juce::Component::SafePointer<MainComponent> safeThis(this);
@@ -7161,7 +8012,7 @@ private:
         renderingDrive.store(song.shapeDrive, std::memory_order_release);
         const bool generatedTrack = song.compositionSeedRecipeEnabled &&
             std::any_of(song.bank.begin(), song.bank.begin() + song.cellCount, [](const risco::Cell& cell) {
-                return cell.formulaOrigin.sourceId == "risco.track.seed.v2";
+                return risco::isSeedTrackOrigin(cell.formulaOrigin);
             });
         if (song.timbreMode > 0 || generatedTrack) {
             formulaEnabled.store(false, std::memory_order_release);
@@ -7323,19 +8174,119 @@ private:
                        juce::dontSendNotification);
         repaint();
     }
-    void appendPoint(juce::Point<int> p, bool finish = false) {
+    void pushDrawingUndo() {
+        constexpr int capacity = 32;
+        if (drawingUndoCount == capacity) {
+            for (int i = 1; i < capacity; ++i)
+                drawingUndoHistory[static_cast<size_t>(i - 1)] =
+                    std::move(drawingUndoHistory[static_cast<size_t>(i)]);
+            --drawingUndoCount;
+        }
+        drawingUndoHistory[static_cast<size_t>(drawingUndoCount++)] = inscription;
+        for (int i = 0; i < drawingRedoCount; ++i)
+            drawingRedoHistory[static_cast<size_t>(i)] = {};
+        drawingRedoCount = 0;
+        refreshDrawingHistoryButtons();
+    }
+    void refreshDrawingHistoryButtons() {
+        undoDrawingButton.setEnabled(drawingUndoCount > 0 && !drawing);
+        redoDrawingButton.setEnabled(drawingRedoCount > 0 && !drawing);
+    }
+    bool undoDrawingEdit() {
+        if (drawing || drawingUndoCount <= 0) return false;
+        constexpr int capacity = 32;
+        if (drawingRedoCount == capacity) {
+            for (int i = 1; i < capacity; ++i)
+                drawingRedoHistory[static_cast<size_t>(i - 1)] =
+                    std::move(drawingRedoHistory[static_cast<size_t>(i)]);
+            --drawingRedoCount;
+        }
+        drawingRedoHistory[static_cast<size_t>(drawingRedoCount++)] = inscription;
+        inscription = std::move(drawingUndoHistory[static_cast<size_t>(--drawingUndoCount)]);
+        drawingUndoHistory[static_cast<size_t>(drawingUndoCount)] = {};
+        ascii.setText(juce::String::fromUTF8(inscription.ascii.c_str()), juce::dontSendNotification);
+        currentPhraseGenerated = false;
+        updateLiveDrawing(false);
+        refreshDrawingHistoryButtons();
+        status.setText(utf8("Edição do desenho desfeita · som recalculado."), juce::dontSendNotification);
+        repaint();
+        return true;
+    }
+    bool redoDrawingEdit() {
+        if (drawing || drawingRedoCount <= 0) return false;
+        constexpr int capacity = 32;
+        if (drawingUndoCount == capacity) {
+            for (int i = 1; i < capacity; ++i)
+                drawingUndoHistory[static_cast<size_t>(i - 1)] =
+                    std::move(drawingUndoHistory[static_cast<size_t>(i)]);
+            --drawingUndoCount;
+        }
+        drawingUndoHistory[static_cast<size_t>(drawingUndoCount++)] = inscription;
+        inscription = std::move(drawingRedoHistory[static_cast<size_t>(--drawingRedoCount)]);
+        drawingRedoHistory[static_cast<size_t>(drawingRedoCount)] = {};
+        ascii.setText(juce::String::fromUTF8(inscription.ascii.c_str()), juce::dontSendNotification);
+        currentPhraseGenerated = false;
+        updateLiveDrawing(false);
+        refreshDrawingHistoryButtons();
+        status.setText(utf8("Edição do desenho refeita · som recalculado."), juce::dontSendNotification);
+        repaint();
+        return true;
+    }
+    static void compactStroke(risco::Stroke& stroke) noexcept {
+        if (stroke.count < 4) return;
+        const auto pressureField = [](const risco::Point& point) noexcept {
+            return point.pressure >= 0.0f && point.pressure <= 1.0f
+                ? point.pressure : 1.0f - point.y;
+        };
+        int removeAt = 1;
+        float leastImportance = std::numeric_limits<float>::max();
+        for (int i = 1; i < stroke.count - 1; ++i) {
+            const auto& before = stroke.points[static_cast<size_t>(i - 1)];
+            const auto& point = stroke.points[static_cast<size_t>(i)];
+            const auto& after = stroke.points[static_cast<size_t>(i + 1)];
+            const float dx = after.x - before.x;
+            const float dy = after.y - before.y;
+            const float lengthSquared = dx * dx + dy * dy;
+            const float t = lengthSquared > 1.0e-8f
+                ? std::clamp(((point.x - before.x) * dx + (point.y - before.y) * dy) /
+                                 lengthSquared, 0.0f, 1.0f)
+                : 0.5f;
+            const float geometricError = std::hypot(point.x - (before.x + dx * t),
+                                                     point.y - (before.y + dy * t));
+            const float expectedPressure = pressureField(before) * (1.0f - t) +
+                                           pressureField(after) * t;
+            const float pressureError = std::abs(pressureField(point) - expectedPressure);
+            const float importance = geometricError + 0.18f * pressureError;
+            if (importance < leastImportance) {
+                leastImportance = importance;
+                removeAt = i;
+            }
+        }
+        for (int i = removeAt; i < stroke.count - 1; ++i)
+            stroke.points[static_cast<size_t>(i)] = stroke.points[static_cast<size_t>(i + 1)];
+        stroke.points[static_cast<size_t>(--stroke.count)] = {};
+    }
+
+    void appendPoint(juce::Point<int> p, bool finish = false, float pressure = -1.0f) {
         if (inscription.count == 0) return;
         auto& stroke = inscription.strokes[static_cast<size_t>(inscription.count - 1)];
         const auto area = drawingArea();
         const float x = std::clamp(float(p.x - area.getX()) / float(area.getWidth()), 0.0f, 1.0f);
         const float y = std::clamp(float(p.y - area.getY()) / float(area.getHeight()), 0.0f, 1.0f);
         bool added = false;
-        if (stroke.count < int(stroke.points.size())) {
-            const bool newPosition = stroke.count == 0 ||
-                std::abs(stroke.points[static_cast<size_t>(stroke.count - 1)].x - x) > 0.001f ||
-                std::abs(stroke.points[static_cast<size_t>(stroke.count - 1)].y - y) > 0.001f;
-            if (newPosition) {
-                stroke.points[static_cast<size_t>(stroke.count++)] = {x, y};
+        const bool newPosition = stroke.count == 0 ||
+            std::abs(stroke.points[static_cast<size_t>(stroke.count - 1)].x - x) > 0.001f ||
+            std::abs(stroke.points[static_cast<size_t>(stroke.count - 1)].y - y) > 0.001f;
+        if (newPosition) {
+            if (stroke.count >= int(stroke.points.size())) compactStroke(stroke);
+            if (stroke.count < int(stroke.points.size())) {
+                stroke.points[static_cast<size_t>(stroke.count++)] = {x, y, pressure};
+                added = true;
+            }
+        } else if (pressure >= 0.0f && pressure <= 1.0f) {
+            auto& last = stroke.points[static_cast<size_t>(stroke.count - 1)];
+            if (last.pressure < 0.0f || std::abs(last.pressure - pressure) >= 0.02f) {
+                last.pressure = pressure;
                 added = true;
             }
         }
@@ -7371,10 +8322,13 @@ private:
         refreshInputButtonLabel();
         ledSourceButton.setTooltip(enabled
             ? utf8("Volta ao desenho neste mesmo quadro; o texto continua guardado.")
-            : utf8("Abre o texto neste quadro; o desenho continua guardado."));
+            : uiText("Desenhe com mouse ou caneta. Pressão compatível controla intensidade; altura também atua como pressão. Traços longos preservam curvas e pressão ao simplificar pontos. Alt+arraste desloca traços.",
+                     "Draw with a mouse or pen. Supported pen pressure shapes dynamics; vertical position also acts as pressure. Long strokes simplify redundant points while preserving curves and pressure. Alt+drag moves strokes.",
+                     "Dessinez à la souris ou au stylet. La pression prise en charge module l’intensité ; la hauteur agit aussi sur la pression. Les longs traits simplifient les points redondants en préservant courbes et pression. Alt-glisser déplace les traits.",
+                     "Dibuje con ratón o lápiz. La presión compatible modela la intensidad; la altura también actúa como presión. Los trazos largos simplifican puntos redundantes y conservan curvas y presión. Alt+arrastrar desplaza trazos."));
         status.setText(enabled
-            ? uiText("Digite no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar.", "Type in the input area. Use Play text/drawing to listen.", "Saisissez du texte dans la zone d’entrée. Choisissez Écouter texte/dessin.", "Escriba en el área de entrada. Use Oír texto/dibujo para escuchar.")
-            : uiText("Desenhe até 12 traços no quadro ENTRADA ÚNICA; use Ouvir texto/desenho para escutar.", "Draw up to 12 strokes. Use Play text/drawing to hear them.", "Dessinez jusqu’à 12 traits. Choisissez Écouter texte/dessin pour les entendre.", "Dibuje hasta 12 trazos. Use Oír texto/dibujo para escucharlos."),
+            ? uiText("Digite no quadro ENTRADA ÚNICA; o som muda enquanto você escreve.", "Type in the input area; sound changes as you write.", "Saisissez dans la zone d’entrée ; le son suit l’écriture.", "Escriba en el área de entrada; el sonido cambia al escribir.")
+            : uiText("Desenhe até 12 traços; o som responde enquanto você desenha.", "Draw up to 12 strokes; sound responds as you draw.", "Dessinez jusqu’à 12 traits ; le son répond au geste.", "Dibuje hasta 12 trazos; el sonido responde al gesto."),
             juce::dontSendNotification);
         if (focus) {
             if (enabled) ascii.grabKeyboardFocus();
@@ -7386,6 +8340,13 @@ private:
         updateLiveDrawing(false);
     }
     void updateLiveDrawing(bool resetScan) {
+        const auto* baseArrangement = activeSong.load(std::memory_order_acquire);
+        const auto* baseSequence = active.load(std::memory_order_acquire);
+        const bool baseTransportPlaying = playing.load(std::memory_order_acquire) &&
+            (baseArrangement != nullptr || baseSequence != nullptr);
+        const bool continuingLiveAudio = baseTransportPlaying ||
+            (playing.load(std::memory_order_acquire) &&
+             liveInputPlayback.load(std::memory_order_acquire) != nullptr);
         const auto text = ascii.getText().toStdString();
         inscription.ascii = text;
         const auto sourceInput = activeInput();
@@ -7394,18 +8355,25 @@ private:
             [](const risco::Stroke& stroke) { return stroke.count >= 2; });
         const bool hasText = !sourceInput.ascii.empty();
         if (!hasStroke && !hasText && !currentPhraseGenerated) {
-            active.store(nullptr, std::memory_order_release);
-            activeSong.store(nullptr, std::memory_order_release);
-            previewingCell = false;
-            if (!directEnabled.load(std::memory_order_acquire))
+            liveInputPlayback.store(nullptr, std::memory_order_release);
+            if (!baseTransportPlaying && !directEnabled.load(std::memory_order_acquire)) {
                 playing.store(false, std::memory_order_release);
+                previewingCell = false;
+            }
             return;
         }
         if (hasStroke && !risco::validInscription(sourceInput)) return;
-        if (snapshots.size() >= 1024) {
+        if (songSnapshots.size() >= 1024) {
             status.setText(utf8("Limite de atualizações ao vivo nesta sessão; reinicie a maquete."),
                            juce::dontSendNotification);
             return;
+        }
+        const auto sourceSeed = hasStroke ? risco::formulaSeedFromDrawing(sourceInput)
+                                          : risco::formulaSeedFromText(sourceInput.ascii);
+        if (sourceSeed != liveInputSeed) {
+            liveInputSeed = sourceSeed;
+            liveDerivationIndex = 0;
+            liveCompletedLoops = 0;
         }
         risco::CellPlan plan;
         plan.bpm = song.bpm;
@@ -7415,43 +8383,190 @@ private:
                     cellSpan.getSelectedId() == 4 ? risco::CellSpan::twoBars :
                     cellSpan.getSelectedId() == 3 ? risco::CellSpan::fourBars : risco::CellSpan::bar;
         plan.repeats = 1;
-        const auto source = currentPhraseGenerated
+        int liveInterpretation = inputInterpretationChoice;
+        float liveInterpretationStrength = inputInterpretationStrength;
+        auto liveGestureCurve = inputGestureCurve;
+        int liveGestureRangeSemitones = inputGestureRangeSemitones;
+        if (!currentPhraseGenerated && autoRouteButton.getToggleState()) {
+            const auto seed = sourceSeed ^ (std::uint64_t(liveDerivationIndex) * 0x9e3779b97f4a7c15ULL);
+            constexpr int interpretations[] = {0, 0, 7, 7, 11, 12, 13, 0};
+            liveInterpretation = interpretations[static_cast<std::size_t>((seed >> 27u) & 7u)];
+            liveInterpretationStrength = (0.35f + float((seed >> 35u) & 7u) * 0.05f) *
+                                         (0.65f + 0.35f * autoEvolutionAmount());
+            if (liveInterpretation >= 11) {
+                constexpr int ranges[] = {6, 12, 24};
+                liveGestureRangeSemitones = ranges[static_cast<std::size_t>((seed >> 39u) % 3u)];
+                liveGestureCurve.enabled = true;
+                liveGestureCurve.values[0] = 0.0f;
+                liveGestureCurve.values[1] = 0.4f + float((seed >> 42u) & 3u) * 0.07f;
+                liveGestureCurve.values[2] = 1.0f;
+            }
+        }
+        auto source = currentPhraseGenerated
             ? risco::phraseFromSeed(currentPhraseSeed, currentPhraseVariation,
                                     currentPhraseVersion, song.bpm, currentPhraseSectionMask, song.beatsPerBar, song.compoundSixEight, effectivePhraseMeters())
-            : risco::interpretInput(risco::composeInput(sourceInput),inputInterpretationChoice,
-                inputInterpretationStrength,inputGestureCurve,inputGestureRangeSemitones);
-        auto next = std::make_unique<risco::Sequence>(currentPhraseGenerated && currentPhraseVersion >= 6 ? source : risco::arrange(source, plan));
-        if (currentPhraseGenerated) *next = risco::editSections(*next,
+            : risco::interpretInput(risco::composeInput(sourceInput),liveInterpretation,
+                liveInterpretationStrength,liveGestureCurve,liveGestureRangeSemitones);
+        if (!currentPhraseGenerated && autoRouteButton.getToggleState() && liveDerivationIndex > 0)
+            source = risco::deriveLiveVariation(source, sourceSeed, liveDerivationIndex, song.bpm,
+                                                autoEvolutionAmount());
+        if (currentPhraseGenerated && currentPhraseVersion < 6) source = risco::arrange(source, plan);
+        if (currentPhraseGenerated) source = risco::editSections(source,
             compareOriginalSections ? risco::SectionEdits{} : currentSectionEdits, currentPhraseVersion == 4 ? 2 : 4,
             currentPhraseVersion >= 6 ? risco::phraseSectionWeights(effectivePhraseMeters(), effectivePhraseSectionBars(), song.beatsPerBar) : effectivePhraseSectionBars());
-        if (next->end <= 0.0) return;
+        if (source.end <= 0.0) return;
+        auto next = std::make_unique<risco::SongPlayback>();
+        next->end = source.end;
+        next->bitDepth = song.bitDepth == 16 ? 16 : 8;
+        next->timbreMode = std::clamp(song.timbreMode, 0, 6);
+        next->ayNoisePeriod = std::clamp(song.ayNoisePeriod, 1, 31);
+        next->ayEnvelopeMode = std::clamp(song.ayEnvelopeMode, 0, 4);
+        next->ayEnvelopeRamp = song.ayEnvelopeRamp;
+        next->historicalAySettings = {song.historicalAyTexture, song.historicalAyNoisePeriod,
+                                      song.historicalAyEnvelope, song.historicalAyEnvelopeRamp};
+        const bool generativeRouting = autoRouteButton.getToggleState();
+        const auto addLivePlacement = [&](const risco::Sequence& sequence, int stem) {
+            if (sequence.count <= 0 || next->count >= int(next->placements.size()) ||
+                stem < 0 || stem >= risco::Song::stemCount) return;
+            auto& placement = next->placements[static_cast<size_t>(next->count++)];
+            placement.cell = sequence;
+            placement.stem = stem;
+            placement.start = 0.0;
+            placement.duration = sequence.end;
+            placement.playLength = sequence.end;
+            placement.repeats = 1;
+        };
+        if (generativeRouting) {
+            constexpr std::array<risco::VoiceRole, 3> voices{{
+                risco::VoiceRole::lead, risco::VoiceRole::bass, risco::VoiceRole::harmony}};
+            constexpr std::array<risco::CellRole, 3> roles{{
+                risco::CellRole::melody, risco::CellRole::bass, risco::CellRole::harmony}};
+            const auto stemForRole = [this, sourceSeed](risco::CellRole role, std::uint32_t salt) {
+                const auto routeSeed = sourceSeed ^
+                    (std::uint64_t(liveDerivationIndex + salt) * 0x94d049bb133111ebULL);
+                std::array<int, risco::Song::stemCount> matches{};
+                int matchCount = 0;
+                for (int stem = 0; stem < risco::Song::stemCount; ++stem)
+                    if (song.stemRole[static_cast<size_t>(stem)] == role)
+                        matches[static_cast<size_t>(matchCount++)] = stem;
+                return matchCount > 0 ? matches[static_cast<size_t>(routeSeed % unsigned(matchCount))]
+                                      : int(routeSeed % risco::Song::stemCount);
+            };
+            for (size_t roleIndex = 0; roleIndex < voices.size(); ++roleIndex) {
+                risco::Sequence part;
+                part.end = source.end;
+                for (int n = 0; n < source.count && part.count < int(part.notes.size()); ++n) {
+                    const auto& note = source.notes[static_cast<size_t>(n)];
+                    if (note.role == voices[roleIndex])
+                        part.notes[static_cast<size_t>(part.count++)] = note;
+                }
+                addLivePlacement(part, stemForRole(roles[roleIndex], static_cast<std::uint32_t>(roleIndex)));
+            }
+            // Give the two additional mix lanes distinct live material too:
+            // a bounded, seed-shaped pulse pattern and a sparse sustained halo.
+            const float layerGain = autoEvolutionAmount();
+            const double beat = 60.0 / std::clamp(song.bpm, 40.0, 240.0);
+            risco::Sequence rhythm;
+            rhythm.end = source.end;
+            const double pulseStep = beat * 0.5;
+            const int sourceEvents = std::clamp(source.count, 0, int(source.notes.size()));
+            const int pulseSlots = sourceEvents > 0 ? sourceEvents :
+                std::clamp(int(std::ceil(source.end / pulseStep)), 1, int(rhythm.notes.size()));
+            for (int slot = 0; slot < pulseSlots; ++slot) {
+                const auto random = sourceSeed ^ (std::uint64_t(liveDerivationIndex + 1u) *
+                    0x9e3779b97f4a7c15ULL) ^ (std::uint64_t(slot + 1) * 0xbf58476d1ce4e5b9ULL);
+                const risco::Note* anchor = sourceEvents > 0
+                    ? &source.notes[static_cast<size_t>(slot)] : nullptr;
+                const float sourceEnergy = anchor != nullptr
+                    ? std::clamp(anchor->gain / 0.16f, 0.0f, 1.0f) : 0.0f;
+                const bool accent = anchor != nullptr
+                    ? (anchor->role == risco::VoiceRole::bass || sourceEnergy >= 0.65f || slot % 4 == 0)
+                    : (slot % 2 == 0);
+                if (!accent && (random & 3u) == 0u) continue;
+                const double onset = anchor != nullptr ? anchor->start : slot * pulseStep;
+                const double subdivision = beat * 0.25;
+                const double quantized = std::round(std::max(0.0, onset) / subdivision) * subdivision;
+                const int microOffset = int((random >> 8u) % 5u) - 2;
+                const double start = std::clamp(quantized + double(microOffset) * subdivision * 0.25,
+                                                0.0, std::max(0.0, source.end - 0.02));
+                bool crowded = false;
+                for (int existing = 0; existing < rhythm.count; ++existing)
+                    if (std::abs(rhythm.notes[static_cast<size_t>(existing)].start - start) < beat * 0.04) {
+                        crowded = true;
+                        break;
+                    }
+                if (crowded) continue;
+                const double duration = std::min(accent ? 0.11 : 0.075,
+                                                 std::max(0.0, source.end - start));
+                if (duration <= 0.0) continue;
+                const double frequency = anchor != nullptr && anchor->frequency > 0.0
+                    ? std::clamp(anchor->frequency * 0.5, 45.0, 110.0)
+                    : accent ? 55.0 + double((random >> 16u) % 3u) * 11.0
+                             : 92.0 + double((random >> 16u) % 5u) * 9.0;
+                const float dynamics = (accent ? 0.085f : 0.045f) *
+                    (anchor != nullptr ? 0.75f + sourceEnergy * 0.5f : 1.0f);
+                rhythm.notes[static_cast<size_t>(rhythm.count++)] = {
+                    start, duration, frequency, dynamics * layerGain,
+                    risco::VoiceRole::bass, 0.125f};
+            }
+            if (rhythm.count > 0)
+                addLivePlacement(rhythm, stemForRole(risco::CellRole::pulse, 3u));
+
+            risco::Sequence texture;
+            texture.end = source.end;
+            const int textureStride = std::max(1, source.count / 8);
+            for (int i = 0; i < source.count && texture.count < 16; i += textureStride) {
+                const auto& note = source.notes[static_cast<size_t>(i)];
+                if (note.frequency <= 0.0 || note.start >= source.end) continue;
+                const auto random = sourceSeed ^ (std::uint64_t(liveDerivationIndex + 5u) *
+                    0x94d049bb133111ebULL) ^ std::uint64_t(i + 1);
+                const double start = std::max(0.0, note.start);
+                const double duration = std::min(source.end - start,
+                    std::max(note.duration * 1.8, beat * (1.0 + double((random >> 8u) & 1u))));
+                const double frequency = note.frequency * ((random & 1u) != 0u ? 0.5 : 2.0);
+                const float gain = std::min(0.035f, std::max(0.012f, note.gain * 0.22f)) * layerGain;
+                texture.notes[static_cast<size_t>(texture.count++)] = {
+                    start, duration, frequency, gain, risco::VoiceRole::harmony, 0.5f};
+            }
+            if (texture.count > 0)
+                addLivePlacement(texture, stemForRole(risco::CellRole::texture, 4u));
+        } else addLivePlacement(source, std::clamp(pendingStem, 0, risco::Song::stemCount - 1));
+        if (next->count <= 0) return;
         const auto* pointer = next.get();
-        snapshots.push_back(std::move(next)); // Imutável; vida útil cobre o callback de áudio.
-        activeSong.store(nullptr, std::memory_order_release);
-        previewingCell = false;
-        active.store(pointer, std::memory_order_release);
+        songSnapshots.push_back(std::move(next)); // Snapshot imutável; vida útil cobre o callback de áudio.
+        directEnabled.store(false, std::memory_order_release);
+        directMode.setToggleState(false, juce::dontSendNotification);
+        autoMode.setToggleState(false, juce::dontSendNotification);
+        liveInputPlayback.store(pointer, std::memory_order_release);
+        if (!baseTransportPlaying) previewingCell = false;
         liveDuration.store(pointer->end, std::memory_order_relaxed);
-        if (resetScan) restart.store(true, std::memory_order_release);
-        if (loopEnabled.load(std::memory_order_acquire))
-            playing.store(true, std::memory_order_release);
+        liveObservedPlayhead = playheadSeconds.load(std::memory_order_relaxed);
+        liveObservedCycle = baseArrangement != nullptr && pointer->end > 0.0
+            ? static_cast<std::int64_t>(std::floor(liveObservedPlayhead / pointer->end)) : 0;
+        if ((!baseTransportPlaying && resetScan) || !continuingLiveAudio)
+            restart.store(true, std::memory_order_release);
+        if (!baseTransportPlaying) {
+            loopEnabled.store(true, std::memory_order_release);
+            loopMode.setToggleState(true, juce::dontSendNotification);
+        }
+        playing.store(true, std::memory_order_release);
         if (hasStroke) {
             const auto seed = risco::formulaSeedFromDrawing(sourceInput);
             const auto palette = risco::paletteForDrawingSeed(seed);
             const auto root = risco::rootForDrawingSeed(seed);
             status.setText(utf8("Campo do desenho: ") + utf8(risco::pitchClassName(root))
                 + " " + utf8(risco::paletteName(palette))
-                + utf8(" · som ao vivo; fórmula: selecione Desenho e Gerar + tocar"),
+                + (generativeRouting ? utf8(" · AUTO deriva gesto e distribui vozes nos canais")
+                                     : utf8(" · manual · STEM ") + juce::String(pendingStem + 1)),
                 juce::dontSendNotification);
         } else {
-            status.setText(utf8("Leitura ao vivo do texto no painel; cada caractere gera um evento."),
+            status.setText(generativeRouting
+                ? utf8("Texto ao vivo · AUTO deriva melodia, baixo, harmonia, ritmo e textura.")
+                : utf8("Texto ao vivo · manual · STEM ") + juce::String(pendingStem + 1),
                            juce::dontSendNotification);
         }
     }
     void playInscription() {
-        if (snapshots.size() >= 1024) {
-            status.setText(utf8("Limite de atualizações nesta sessão; reinicie a maquete."), juce::dontSendNotification);
-            return;
-        }
         inscription.ascii = ascii.getText().toStdString();
         const auto sourceInput = activeInput();
         if (!risco::validInscription(sourceInput)) {
@@ -7459,33 +8574,37 @@ private:
                            juce::dontSendNotification);
             return;
         }
-        risco::CellPlan plan;
-        plan.bpm = song.bpm;
-        plan.beatsPerBar = song.beatsPerBar;
-        plan.span = cellSpan.getSelectedId() == 1 ? risco::CellSpan::beat :
-                    cellSpan.getSelectedId() == 4 ? risco::CellSpan::twoBars :
-                    cellSpan.getSelectedId() == 3 ? risco::CellSpan::fourBars : risco::CellSpan::bar;
-        plan.repeats = repetitions.getSelectedId();
-        auto next = std::make_unique<risco::Sequence>(risco::arrange(
-            risco::interpretInput(risco::composeInput(sourceInput),inputInterpretationChoice,
-                inputInterpretationStrength,inputGestureCurve,inputGestureRangeSemitones),plan));
-        const auto* pointer = next.get();
-        snapshots.push_back(std::move(next)); // Vida útil cobre todos os callbacks de áudio.
-        directEnabled.store(false, std::memory_order_release);
-        directMode.setToggleState(false, juce::dontSendNotification);
-        autoMode.setToggleState(false, juce::dontSendNotification);
-        playing.store(false, std::memory_order_release);
-        activeSong.store(nullptr, std::memory_order_release);
-        previewingCell = false;
-        active.store(pointer, std::memory_order_release);
-        liveDuration.store(pointer->end, std::memory_order_relaxed);
-        restart.store(true, std::memory_order_release);
-        playing.store(true, std::memory_order_release);
-        status.setText(utf8("Leitura: frase, pausa e resposta grave. Risque e releia."),
-                       juce::dontSendNotification);
+        currentPhraseGenerated = false;
+        updateLiveDrawing(true);
     }
     void timerCallback() override {
+        pruneAudioSnapshots();
         finishLibraryRead();
+        const auto* livePlayback = liveInputPlayback.load(std::memory_order_acquire);
+        const bool liveAutoPlaying = livePlayback != nullptr &&
+            playing.load(std::memory_order_acquire) && autoRouteButton.getToggleState() &&
+            !currentPhraseGenerated && !seedTrackPreview;
+        if (liveAutoPlaying) {
+            const double position = playheadSeconds.load(std::memory_order_relaxed);
+            const double duration = std::max(0.18, liveDuration.load(std::memory_order_relaxed));
+            const bool arrangementActive = activeSong.load(std::memory_order_acquire) != nullptr;
+            const auto cycle = arrangementActive
+                ? static_cast<std::int64_t>(std::floor(std::max(0.0, position) / duration)) : 0;
+            const bool completedCycle = arrangementActive ? cycle > liveObservedCycle
+                : liveObservedPlayhead > position + duration * 0.45;
+            if (completedCycle) {
+                ++liveCompletedLoops;
+                if (liveCompletedLoops % static_cast<std::uint32_t>(std::max(1, autoEvolutionEveryLoops)) == 0u) {
+                    ++liveDerivationIndex;
+                    updateLiveDrawing(false);
+                }
+            }
+            liveObservedPlayhead = playheadSeconds.load(std::memory_order_relaxed);
+            liveObservedCycle = arrangementActive ? cycle : 0;
+        } else {
+            liveObservedPlayhead = playheadSeconds.load(std::memory_order_relaxed);
+            liveObservedCycle = 0;
+        }
         const auto recoveryNow = juce::Time::getMillisecondCounter();
         if (recoveryNow - lastRecoveryMillis >= 60000u) {
             lastRecoveryMillis = recoveryNow;
@@ -7551,6 +8670,16 @@ private:
         const auto idle = uiText("Aguardando tarefa", "Waiting for a task", "En attente d’une tâche", "Esperando tarea");
         activityStatus.setText(uiText("Atividade · ", "Activity · ", "Activité · ", "Actividad · ")
             + (activityMessage.isEmpty() ? idle : activityMessage), juce::dontSendNotification);
+    }
+
+    void pruneAudioSnapshots() {
+        const bool audioIdle = audioReaders.load(std::memory_order_acquire) == 0;
+        risco::pruneInactiveAudioSnapshots(snapshots, active.load(std::memory_order_acquire),
+                                           audioIdle, 96);
+        // Reproduções normais têm limite de 64; limpar em 33 evita que o
+        // limite de sessão seja alcançado antes da coleta do timer.
+        risco::pruneInactiveAudioSnapshots(songSnapshots, activeSong.load(std::memory_order_acquire),
+                                           audioIdle, 32);
     }
 
     void refreshGenerationStatus() {
@@ -7913,6 +9042,8 @@ private:
     int gridUndoCount = 0;
     GridState placementDragBefore;
     risco::Inscription inscription;
+    std::array<risco::Inscription, 32> drawingUndoHistory{}, drawingRedoHistory{};
+    int drawingUndoCount = 0, drawingRedoCount = 0;
     risco::Song song;
     risco::FormulaLibrary formulaLibrary;
     bool localLibraryWritable = true;
@@ -7921,7 +9052,7 @@ private:
     bool manualGlitchMode = false;
     std::string seedBeforeGlitch;
     juce::Label formulaGridStatus;
-    juce::TextButton play, cross, clear, glyph, functionMode, loopMode, applyFormula, stopButton;
+    juce::TextButton play, cross, clear, undoDrawingButton, redoDrawingButton, glyph, functionMode, loopMode, applyFormula, stopButton;
     juce::TextButton directMode, resetDirectButton;
     juce::TextButton formulaToNotesButton;
     juce::TextButton saveFormulaNotesButton;
@@ -7973,11 +9104,11 @@ private:
     std::array<risco::StemPanAutomation, risco::Song::stemCount> stemPanAutoProcessors;
     std::array<std::atomic<int>, risco::Song::stemCount> stemEffectValue{};
     std::array<std::atomic<float>, risco::Song::stemCount> stemFilterCutoffValue{};
-    std::array<std::atomic<float>, risco::Song::stemCount> stemReverbMixValue{{0.25f, 0.25f, 0.25f}};
+    std::array<std::atomic<float>, risco::Song::stemCount> stemReverbMixValue{{0.25f, 0.25f, 0.25f, 0.25f, 0.25f}};
     std::array<std::atomic<float>, risco::Song::stemCount> stemReverbDecayValue{};
     std::array<std::atomic<int>, risco::Song::stemCount> stemBitcrushBitsValue{};
-    std::array<std::atomic<float>, risco::Song::stemCount> stemDelayMixValue{{0.3f, 0.3f, 0.3f}};
-    std::array<std::atomic<float>, risco::Song::stemCount> stemDelayFeedbackValue{{0.35f, 0.35f, 0.35f}};
+    std::array<std::atomic<float>, risco::Song::stemCount> stemDelayMixValue{{0.3f, 0.3f, 0.3f, 0.3f, 0.3f}};
+    std::array<std::atomic<float>, risco::Song::stemCount> stemDelayFeedbackValue{{0.35f, 0.35f, 0.35f, 0.35f, 0.35f}};
     std::array<juce::TextButton, risco::Song::stemCount> stemMute, stemSolo;
     std::array<juce::Label, risco::Song::stemCount> stemPanLabel;
     std::array<juce::ComboBox, risco::Song::stemCount> stemRoleSelect;
@@ -8006,7 +9137,8 @@ private:
     int libraryCandidateCell = -1;
     std::string libraryCandidateDescription;
     juce::ComboBox stemSelect, roleSelect;
-    juce::TextButton storeCellButton, updateCellButton, placeCellButton, playSongButton;
+        juce::TextButton storeCellButton, updateCellButton, placeCellButton, playSongButton;
+    AutoSettingsButton autoRouteButton;
     juce::TextButton previewCellButton, seedTrackButton;
     juce::TextButton saveButton, openButton, removeLastButton, albumMenuButton;
     juce::TextButton automationEditorButton;
@@ -8025,6 +9157,13 @@ private:
     float inputInterpretationStrength = 1;
     risco::TemporalGestureCurve inputGestureCurve;
     int inputGestureRangeSemitones = 12;
+    std::uint64_t liveInputSeed = 0;
+    std::uint32_t liveDerivationIndex = 0;
+    std::uint32_t liveCompletedLoops = 0;
+    int autoEvolutionStrength = 2;
+    int autoEvolutionEveryLoops = 1;
+    double liveObservedPlayhead = 0.0;
+    std::int64_t liveObservedCycle = 0;
     std::array<int, 4> formulaChordRootChoices{{-1, -1, -1, -1}};
     juce::ComboBox formulaGroupingSelect;
     juce::ComboBox languageSelect;
@@ -8038,11 +9177,12 @@ private:
     juce::Slider masterSlider, bpmSlider;
     std::vector<std::unique_ptr<risco::Sequence>> snapshots;
     std::vector<std::unique_ptr<risco::SongPlayback>> songSnapshots;
+    std::atomic<const risco::SongPlayback*> liveInputPlayback{nullptr};
     std::vector<std::unique_ptr<risco::BytebeatProgram>> formulaSnapshots;
     std::vector<CompositionVersion> compositionVersions;
     int activeCompositionVersion = -1;
     std::unique_ptr<juce::AlertWindow> compositionSeedDialog, compositionSeedPreviewDialog;
-    std::unique_ptr<juce::AlertWindow> seedTrackDialog, seedTrackReviewDialog;
+    std::unique_ptr<juce::AlertWindow> seedTrackDialog, seedTrackReviewDialog, seedTrackPartDialog;
     struct SeedTrackPreview {
         SeedTrackPreview(std::shared_ptr<const risco::Song> source,
                          std::unique_ptr<risco::SongPlayback> prepared, double rate)
@@ -8075,6 +9215,7 @@ private:
     std::uint32_t lastRecoveryMillis = juce::Time::getMillisecondCounter();
     std::atomic<const risco::Sequence*> active{nullptr};
     std::atomic<const risco::SongPlayback*> activeSong{nullptr};
+    std::atomic<unsigned> audioReaders{0};
     std::atomic<const risco::BytebeatProgram*> activeFormula{nullptr};
     std::atomic<bool> playing{false}, restart{false};
     std::atomic<bool> formulaEnabled{false}, loopEnabled{false};
@@ -8084,11 +9225,12 @@ private:
     std::atomic<float> masterGain{0.35f};
     std::atomic<double> renderingBpm{120.0};
     std::array<std::atomic<float>, risco::Song::stemCount> stemPanValue{};
-    std::array<std::atomic<float>, risco::Song::stemCount> stemGainValue{{1.0f, 1.0f, 1.0f}};
+    std::array<std::atomic<float>, risco::Song::stemCount> stemGainValue{{1.0f, 1.0f, 1.0f, 1.0f, 1.0f}};
     std::array<std::atomic<bool>, risco::Song::stemCount> stemMuted{}, stemSoloed{};
     std::atomic<int> renderingBits{8};
     std::atomic<int> renderingTimbre{0};
     std::array<risco::HistoricalAyEngine, risco::Song::stemCount> historicalStemEngines;
+    std::array<risco::HistoricalAyEngine, risco::Song::stemCount> liveHistoricalStemEngines;
     risco::HistoricalAyEngine historicalPreviewEngine;
     int historicalPreparedTimbre = 0; // Audio-thread state only.
     std::atomic<int> renderingAyNoisePeriod{16};
@@ -8149,6 +9291,9 @@ private:
     bool loopRangeSelecting = false;
     int gridZoomBeats = 0;
     int draggedPlacement = -1;
+    int movingStroke = -1;
+    bool movingStrokeHistoryPushed = false;
+    juce::Point<int> lastStrokeMovePoint;
     GridDragMode gridDragMode = GridDragMode::none;
     int placementDragOriginalBeat = 0;
     int placementDragBeat = 0;

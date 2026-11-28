@@ -19,7 +19,21 @@ enum class AlbumTempoContour : std::uint8_t {
 enum class AlbumMusicProfile : std::uint8_t {
     original = 0,
     related = 1,
-    contrasting = 2
+    contrasting = 2,
+    automatic = 255
+};
+
+inline constexpr int maxAlbumTracks = 12;
+
+struct AlbumSource {
+    SeedTrackMaterial material = SeedTrackMaterial::none;
+    std::uint64_t fingerprint = 0;
+    SeedTrackCue cue = SeedTrackCue::none;
+    SeedTrackMotif motif;
+    friend bool operator==(const AlbumSource& a, const AlbumSource& b) noexcept {
+        return a.material == b.material && a.fingerprint == b.fingerprint &&
+               a.cue == b.cue && a.motif == b.motif;
+    }
 };
 
 struct AlbumPlanRequest {
@@ -29,6 +43,16 @@ struct AlbumPlanRequest {
     double tempoSpread = 20.0;
     AlbumTempoContour contour = AlbumTempoContour::arc;
     AlbumMusicProfile profile = AlbumMusicProfile::original;
+    std::array<AlbumMusicProfile, maxAlbumTracks> trackProfiles = [] {
+        std::array<AlbumMusicProfile, maxAlbumTracks> values{};
+        values.fill(AlbumMusicProfile::automatic);
+        return values;
+    }();
+    bool arrangeByParts = false;
+    AlbumSource source;
+    // V1 preserves existing albums; source-based albums may opt into motif
+    // development between returns with V2.
+    int generatorVersion = 1;
 };
 
 struct AlbumTrackPlan {
@@ -39,11 +63,20 @@ struct AlbumTrackPlan {
     int surprise = 1;
     SeedTrackPulse pulse = SeedTrackPulse::straight;
     SeedTrackPalette palette = SeedTrackPalette::original;
+    AlbumMusicProfile profile = AlbumMusicProfile::original;
+    bool arrangeByParts = false;
+    AlbumSource source;
+    SeedTrackCue cue = SeedTrackCue::none;
+    int motifStem = -1;
+    int generatorVersion = 1;
     friend bool operator==(const AlbumTrackPlan& left, const AlbumTrackPlan& right) noexcept {
         return left.seed == right.seed && left.bpm == right.bpm &&
                left.durationBars == right.durationBars && left.form == right.form &&
                left.surprise == right.surprise && left.pulse == right.pulse &&
-               left.palette == right.palette;
+               left.palette == right.palette && left.profile == right.profile &&
+               left.arrangeByParts == right.arrangeByParts && left.source == right.source &&
+               left.cue == right.cue && left.motifStem == right.motifStem &&
+               left.generatorVersion == right.generatorVersion;
     }
     friend bool operator!=(const AlbumTrackPlan& left, const AlbumTrackPlan& right) noexcept {
         return !(left == right);
@@ -51,7 +84,7 @@ struct AlbumTrackPlan {
 };
 
 struct AlbumPlan {
-    static constexpr int maxTracks = 12;
+    static constexpr int maxTracks = maxAlbumTracks;
     AlbumPlanRequest request;
     std::array<AlbumTrackPlan, maxTracks> tracks{};
     int count = 0;

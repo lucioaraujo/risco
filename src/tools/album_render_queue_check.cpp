@@ -45,6 +45,10 @@ bool makeFixture(const fs::path& directory, risco::AlbumManifest& manifest) {
     request.tempoSpread = 8.0;
     request.contour = risco::AlbumTempoContour::arc;
     request.profile = risco::AlbumMusicProfile::contrasting;
+    request.arrangeByParts = true;
+    const std::string inscription = "Aqui, o vento muda";
+    request.source = {risco::SeedTrackMaterial::text, 503, risco::seedTrackTextCue(inscription),
+                      risco::seedTrackMotif(risco::composeText(inscription))};
     risco::AlbumPlan plan;
     if (!risco::makeAlbumPlan(request, plan) ||
         !risco::createAlbumManifest(plan, "Album render queue integration", manifest))

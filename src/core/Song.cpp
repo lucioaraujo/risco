@@ -24,7 +24,9 @@ bool validInscription(const Inscription& source) noexcept {
         for (int p = 0; p < stroke.count; ++p) {
             const auto& point = stroke.points[static_cast<size_t>(p)];
             if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
-                point.x < 0.0f || point.x > 1.0f || point.y < 0.0f || point.y > 1.0f)
+                point.x < 0.0f || point.x > 1.0f || point.y < 0.0f || point.y > 1.0f ||
+                !std::isfinite(point.pressure) ||
+                (point.pressure != -1.0f && (point.pressure < 0.0f || point.pressure > 1.0f)))
                 return false;
         }
     }
@@ -313,7 +315,7 @@ bool placeCell(Song& song, Placement placement) noexcept {
 
 PlacementSuggestion suggestPlacement(const Song& song, std::uint32_t cellId,
                                      CellSpan span, int repeats, int fromBeat,
-                                     bool balanceSound) noexcept {
+                                     bool balanceSound, std::uint64_t generativeSeed) noexcept {
     PlacementSuggestion best;
     const auto* sourceCell = findCell(song, cellId);
     if (sourceCell == nullptr || song.placementCount < 0 ||
@@ -323,11 +325,17 @@ PlacementSuggestion suggestPlacement(const Song& song, std::uint32_t cellId,
          span != CellSpan::twoBars)) return best;
     const int beats = std::clamp(song.beatsPerBar, 2, 7);
     const auto sourceProfile = describeCellAudio(*sourceCell, song.bpm, beats);
-    std::array<CellAudioProfile, 64> profiles{};
+    std::array<CellAudioProfile, Song::bankCapacity> profiles{};
     for (int i = 0; i < song.cellCount; ++i)
         profiles[static_cast<size_t>(i)] = describeCellAudio(song.bank[static_cast<size_t>(i)], song.bpm, beats);
     const int length = int(std::lround(placementLengthSeconds(song, {cellId, 0, span, repeats}) * song.bpm / 60.0));
     const int anchor = ((fromBeat + beats - 1) / beats) * beats;
+    struct ScoredPlacement {
+        int score = 0;
+        PlacementSuggestion suggestion;
+    };
+    std::array<ScoredPlacement, 17 * Song::stemCount> candidates{};
+    int candidateCount = 0;
     int bestScore = std::numeric_limits<int>::max();
     for (int bar = 0; bar <= 16; ++bar) {
         const int start = anchor + bar * beats;
@@ -385,16 +393,55 @@ PlacementSuggestion suggestPlacement(const Song& song, std::uint32_t cellId,
                     concurrent[static_cast<size_t>(placed.stem)] = true;
             }
             if (blocked) continue;
-            const int active = int(concurrent[0]) + int(concurrent[1]) + int(concurrent[2]);
+            const int active = static_cast<int>(std::count(concurrent.begin(), concurrent.end(), true));
+            const auto routeBits = generativeSeed ^
+                (0x5354454d00000001ULL + static_cast<std::uint64_t>(stem));
+            const auto routeHash = routeBits ^ (routeBits >> 30u);
+            const int generativeTieBreak = generativeSeed == 0 ? stem * 2 :
+                static_cast<int>((routeHash * 0xbf58476d1ce4e5b9ULL) % 9u);
             const int score = bar * 10 + active * 12 + (duplicateOverlap ? 80 : 0) +
                               (sameRoleConcurrent ? 80 : 0) + (otherRoleOnStem ? 8 : 0) +
-                              soundOverlapPenalty + (stemRoleConflict ? 18 : 0) + stem * 2 -
+                              soundOverlapPenalty + (stemRoleConflict ? 18 : 0) + generativeTieBreak -
                               (motif ? 8 : 0) - (roleOnStem ? 20 : 0) - (stemRoleMatch ? 24 : 0);
             if (score < bestScore) {
                 bestScore = score;
                 best = {true, start, stem, active, motif, roleOnStem, sameRoleConcurrent};
                 best.stemRoleMatch = stemRoleMatch;
                 best.profile = sourceProfile;
+            }
+            if (candidateCount < static_cast<int>(candidates.size())) {
+                PlacementSuggestion suggestion{true, start, stem, active, motif,
+                                                roleOnStem, sameRoleConcurrent};
+                suggestion.stemRoleMatch = stemRoleMatch;
+                suggestion.profile = sourceProfile;
+                candidates[static_cast<size_t>(candidateCount++)] = {score, suggestion};
+            }
+        }
+    }
+    // AUTO can choose among near-optimal positions. Manual suggestions (seed 0)
+    // continue to return the exact minimum-score candidate above.
+    if (generativeSeed != 0 && best.valid) {
+        constexpr int nearBestWindow = 12;
+        int eligibleCount = 0;
+        for (int i = 0; i < candidateCount; ++i)
+            if (candidates[static_cast<size_t>(i)].score <= bestScore + nearBestWindow)
+                ++eligibleCount;
+        if (eligibleCount > 1) {
+            auto choice = generativeSeed ^
+                (0x9e3779b97f4a7c15ULL * static_cast<std::uint64_t>(song.placementCount + 1));
+            choice ^= choice >> 30u;
+            choice *= 0xbf58476d1ce4e5b9ULL;
+            choice ^= choice >> 27u;
+            choice *= 0x94d049bb133111ebULL;
+            choice ^= choice >> 31u;
+            int selected = static_cast<int>(choice % static_cast<std::uint64_t>(eligibleCount));
+            for (int i = 0; i < candidateCount; ++i) {
+                const auto& candidate = candidates[static_cast<size_t>(i)];
+                if (candidate.score > bestScore + nearBestWindow) continue;
+                if (selected-- == 0) {
+                    best = candidate.suggestion;
+                    break;
+                }
             }
         }
     }

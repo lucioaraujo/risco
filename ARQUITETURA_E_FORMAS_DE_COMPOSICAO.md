@@ -1,5 +1,114 @@
 # Risco — arquitetura e formas de composição
 
+## Edição de partes na proposta
+
+**Editar partes** permite escolher os canais de uma parte, ajustar sua
+duração em blocos de quatro compassos, repetir o primeiro bloco e definir
+dinâmica estável, crescendo, diminuendo ou **Arco**, que cresce até o centro e
+recua no fim. Ao mudar a duração, as partes seguintes mudam de posição e usam
+os mesmos motivos de referência. **Restaurar
+automático** devolve a parte à decisão do gerador.
+
+O Risco gera uma nova proposta com a mesma seed. O A/B conserva as duas
+receitas para alternar entre a versão anterior e a editada. O arquivo salvo
+guarda o resultado como células na grade e registra as escolhas na
+proveniência. Em **Salvar → Reeditar partes da faixa salva**, o Risco lê essa
+receita e reabre os controles depois que o projeto é aberto novamente.
+**Aplicar** deriva outra proposta com a mesma seed e mantém a faixa carregada
+como comparação A/B. Isso vale para projetos gerados em Por partes com receita
+V4–V7 reconhecível; projetos feitos à mão e formatos antigos sem essa
+proveniência continuam editáveis pela grade. Antes de exibir a ação, o Risco
+regera a estrutura e compara células, eventos e posições; se a grade foi
+alterada manualmente, a receita não é oferecida como editor ativo.
+
+## Motivo e comparação na faixa completa
+
+Com Texto ou Desenho como origem, uma faixa avulsa reaproveita os intervalos
+e ataques da leitura sonora da inscrição. O motivo entra pela melodia quando
+vem do texto e pela textura quando vem do desenho. A seed escolhe outro
+canal para o retorno. A revisão mostra as duas pistas. O projeto guarda os
+eventos e a receita do motivo, incluindo o canal de retorno.
+
+**Nova seed** na revisão gera outra proposta com as mesmas opções e o mesmo
+motivo. **Trocar A/B** alterna entre a proposta atual e a anterior em memória.
+Cada uma pode ser ouvida e salva. Ao trocar de proposta, a prévia em curso
+para e o botão **Ouvir prévia** fica disponível para a versão selecionada.
+
+Na receita da faixa V2, a surpresa transforma apenas o retorno: no nível médio,
+espelha os intervalos em torno da primeira nota; no alto, faz o espelho e
+reverte a ordem dos ataques. O motivo original continua na abertura. O nível
+baixo mantém o retorno literal. **Retorno do motivo** oferece Automático (padrão),
+Literal, Espelho e Espelho + retrógrado para uma escolha manual independente da
+surpresa. A proveniência V8 identifica a regra automática; V9 guarda uma escolha
+manual. Projetos V4–V7 preservam a reprodução anterior.
+
+## Motivo compartilhado no álbum
+
+O planejamento aceita Número, Texto atual ou Desenho atual como origem.
+Com uma inscrição, o Risco sugere a seed a partir da impressão digital e
+reaproveita a leitura sonora existente para extrair até cinco ataques da voz
+principal. O motivo guarda os intervalos em semitons e as distâncias rítmicas
+quantizadas em meios tempos. O registro e a duração de cada nota se adaptam
+ao canal e ao BPM da faixa.
+
+O motivo aparece na abertura e no retorno. Em novos álbuns com inscrição, o
+gerador V2 desenvolve o retorno por faixa: surpresa baixa mantém o motivo,
+média espelha os intervalos e alta espelha e reverte a ordem dos ataques. O V1
+dos manifestos antigos continua reproduzível. A linha muda entre melodia,
+baixo e textura conforme a posição no álbum. A partir de quatro faixas,
+a última recupera o motivo na melodia. No arranjo por partes, a pontuação
+pode abrir uma pausa nas faixas de abertura, de colagem e de encerramento.
+O desenho orienta a dinâmica. No perfil Contraste, algumas faixas internas
+invertem a direção do crescendo.
+
+O manifesto V6 guarda a versão do gerador, a impressão digital, o motivo
+extraído e as escolhas
+por faixa. **Álbum → Retomar projetos** lê o manifesto da pasta e usa os dados
+derivados da inscrição. Projetos existentes compatíveis são reaproveitados.
+A revisão do plano também nomeia a transformação que cada faixa aplicará ao
+retorno, antes da criação dos projetos.
+A retomada é interrompida ao encontrar um projeto incompatível. Os formatos V1 a V4
+continuam disponíveis para álbuns de origem numérica.
+
+## Arranjo por partes
+
+O arranjo **Por partes** monta abertura, desenvolvimento, quebra, retorno e
+final. A seed escolhe combinações de canais dentro de cada função musical.
+A abertura pode soar com melodia, textura ou as duas. O desenvolvimento
+acrescenta baixo e ritmo, a quebra reduz o conjunto e o retorno reúne os
+cinco canais. Um final mais leve encerra a forma. Os blocos continuam usando
+o BPM da faixa. Cada parte pode ter uma curva simples de intensidade.
+
+O gerador cria na grade apenas as células dos canais que tocam. Cada
+ocorrência continua editável e os espaços da grade representam as pausas dos
+canais. A revisão da faixa indica o intervalo de compassos e os canais de
+cada parte. O modo **Contínuo** preenche os cinco canais em cada bloco.
+
+Na faixa completa, pontuação interna ou quebra de linha no texto pode
+reservar o último compasso da quebra para a respiração. A direção vertical
+média dos traços ativos define um crescendo ou diminuendo no desenvolvimento.
+A seed e o material, junto das opções, reproduzem a proposta. O projeto
+registra a seed, a impressão digital da inscrição e a indicação extraída.
+Álbuns numéricos **Por partes** guardam esse modo no manifesto V4. Os
+manifestos V1 a V3 usam o arranjo contínuo.
+
+## Nova seed para faixa completa — 27 nov. 2026
+
+O fluxo **Gerar faixa completa** oferece **Nova seed**, inspirado no botão
+**SORTEAR UM PATCH** do aplicativo Rasgo Modular (referência de interação;
+Risco mantém seu gerador e sua identidade). A ação sorteia uma variação nova e
+gera uma proposta; não altera a música aberta. Com texto ou desenho como
+origem, o fingerprint determinístico da inscrição participa da derivação da
+nova seed e é guardado na proveniência. A seed numérica resultante reproduz a
+faixa; para guardar a proposta, o músico pode ouvi-la e salvá-la no fluxo de
+revisão.
+
+Forma, surpresa, duração (32/64/80 compassos), pulso e paleta são escolhas
+visíveis da receita e ficam registradas na proveniência da faixa. O arranjo
+por partes usa as primeiras indicações de texto e desenho descritas acima.
+Ainda resta mapear ritmo, pressão e contornos internos em motivos e decisões
+de arranjo.
+
 Estado operacional em 21 nov. 2026: formato V41, com frases V6 métricas,
 compassos por seção e respostas harmônicas fixas, móveis e com intenção
 explícita e V7 com controle logístico inteiro, seed/reset e custo limitado.
@@ -214,7 +323,8 @@ registrado, não reconhece semanticamente o timbre nem prova que o rótulo
 corresponde ao áudio. Cada célula pode declarar **livre, pulso, baixo, harmonia,
 melodia ou textura**. Cada pista também declara um papel nessa lista, editável
 no seletor à esquerda da fileira e salvo em V24; arquivos V1–V23 recebem o
-padrão melodia/harmonia/baixo. A sugestão favorece o encaixe entre o papel da
+padrão melodia/harmonia/baixo, com Ritmo e Textura adicionais na extensão
+opcional `STEM_EXTRAS`. A sugestão favorece o encaixe entre o papel da
 célula e o papel da pista, além de considerar continuidade e simultaneidade.
 Esses papéis orientam a distribuição, mas não alteram a síntese nem movem
 ocorrências já colocadas. O papel da célula é uma intenção editável no banco e
@@ -764,8 +874,11 @@ leitura fonética, sintática ou semântica. Expressões do Bytebeat direto agor
 podem ser registradas e sequenciadas; frases fórmula→eventos guardam a fórmula,
 os eventos e a regra composicional; ainda não há gravação PCM. A seleção
 8/16-bit já quantiza as vozes por notas e fica salva no arquivo da música;
-Bytebeat direto permanece em 8 bits. A grade tem três stems persistidos com
-volume, pan, mute e solo, que compartilham MASTER e saída estéreo; saídas
+Bytebeat direto permanece em 8 bits. A grade tem cinco stems persistidos com
+volume, pan, mute e solo, que compartilham MASTER e saída estéreo. Os canais
+Ritmo e Textura ampliam o núcleo melodia/harmonia/baixo; arquivos antigos
+preservam os três stems originais e recebem os dois novos em `STEM_EXTRAS`;
+saídas
 físicas separadas ainda não existem. O grafo de influência, Floatbeat e síntese híbrida
 controlável ainda são propostas. O perfil de trio chiptune próprio já pode
 ser selecionado; o orçamento de três vozes ainda é local a cada célula. O

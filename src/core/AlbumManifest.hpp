@@ -29,7 +29,7 @@ struct AlbumTrackRecord {
 };
 
 struct AlbumManifest {
-    static constexpr unsigned schemaVersion = 2;
+    static constexpr unsigned schemaVersion = 6;
     std::string title;
     AlbumPlan plan;
     std::array<AlbumTrackRecord, AlbumPlan::maxTracks> tracks{};

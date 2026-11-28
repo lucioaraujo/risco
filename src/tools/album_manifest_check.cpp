@@ -79,7 +79,7 @@ bool checkpointsRoundTripAndResume() {
     std::istringstream broken(truncated);
     if (risco::loadAlbumManifest(broken, loaded) || !serialize(loaded, reencoded) ||
         reencoded != original) return false;
-    std::istringstream unsupported("RISCO_ALBUM_V3\n");
+    std::istringstream unsupported("RISCO_ALBUM_V4\n");
     if (risco::loadAlbumManifest(unsupported, loaded)) return false;
 
     // The WAV writer reports its meter floor for a silent track.
@@ -120,10 +120,132 @@ bool detailedManifestRoundTrip() {
     return !risco::loadAlbumManifest(altered, loaded) &&
            serialize(loaded, reencoded) && encoded == reencoded;
 }
+
+bool perTrackProfileManifestRoundTrip() {
+    risco::AlbumPlanRequest request;
+    request.seed = 0x9abc1234ULL;
+    request.trackCount = 4;
+    request.profile = risco::AlbumMusicProfile::contrasting;
+    request.trackProfiles[1] = risco::AlbumMusicProfile::original;
+    request.trackProfiles[2] = risco::AlbumMusicProfile::related;
+    request.trackProfiles[3] = risco::AlbumMusicProfile::contrasting;
+
+    risco::AlbumPlan plan;
+    risco::AlbumManifest manifest, loaded;
+    std::string encoded, reencoded;
+    if (!risco::makeAlbumPlan(request, plan) ||
+        !risco::createAlbumManifest(plan, "Per track", manifest) ||
+        !risco::recordAlbumProject(manifest, 0, "track-01.risco") ||
+        !serialize(manifest, encoded) || encoded.rfind("RISCO_ALBUM_V3\n", 0) != 0)
+        return false;
+    std::istringstream input(encoded);
+    if (!risco::loadAlbumManifest(input, loaded) ||
+        loaded.plan.request.trackProfiles != request.trackProfiles ||
+        loaded.plan.tracks != plan.tracks ||
+        loaded.tracks[0].state != risco::AlbumTrackState::projectReady ||
+        !serialize(loaded, reencoded) || encoded != reencoded) return false;
+
+    // A changed profile header must not detach the generated tracks from the plan.
+    const auto headerEnd = encoded.find('\n', encoded.find('\n') + 1);
+    if (headerEnd == std::string::npos) return false;
+    auto tampered = encoded;
+    const auto profileSequence = tampered.rfind(" 2 255 0 1 2\n", headerEnd);
+    if (profileSequence == std::string::npos) return false;
+    tampered.replace(profileSequence, std::string(" 2 255 0 1 2\n").size(), " 2 255 1 1 2\n");
+    std::istringstream altered(tampered);
+    return !risco::loadAlbumManifest(altered, loaded) &&
+           serialize(loaded, reencoded) && encoded == reencoded;
+}
+
+bool arrangedAlbumRoundTrip() {
+    risco::AlbumPlanRequest request;
+    request.seed = 712;
+    request.trackCount = 3;
+    request.profile = risco::AlbumMusicProfile::related;
+    request.trackProfiles[1] = risco::AlbumMusicProfile::contrasting;
+    request.arrangeByParts = true;
+    risco::AlbumPlan plan;
+    risco::AlbumManifest manifest, loaded;
+    std::string encoded, reencoded;
+    if (!risco::makeAlbumPlan(request, plan) ||
+        !risco::createAlbumManifest(plan, "Parts", manifest) ||
+        !risco::recordAlbumProject(manifest, 0, "track-01.risco") ||
+        !serialize(manifest, encoded) || encoded.rfind("RISCO_ALBUM_V4\n", 0) != 0)
+        return false;
+    std::istringstream input(encoded);
+    if (!risco::loadAlbumManifest(input, loaded) || !loaded.plan.request.arrangeByParts ||
+        loaded.plan.tracks != plan.tracks || !serialize(loaded, reencoded) || encoded != reencoded)
+        return false;
+    auto wrongVersion = encoded;
+    wrongVersion.replace(0, std::string("RISCO_ALBUM_V4").size(), "RISCO_ALBUM_V3");
+    std::istringstream altered(wrongVersion);
+    return !risco::loadAlbumManifest(altered, loaded);
+}
+
+bool sourceAlbumRoundTrip() {
+    risco::AlbumPlanRequest request;
+    request.seed = 507;
+    request.trackCount = 4;
+    request.profile = risco::AlbumMusicProfile::contrasting;
+    const std::string inscription = "Logo cedo, a cidade respira";
+    request.source = {risco::SeedTrackMaterial::text, 811, risco::seedTrackTextCue(inscription),
+                      risco::seedTrackMotif(risco::composeText(inscription))};
+    for (const bool byParts : {false, true}) {
+        request.arrangeByParts = byParts;
+        risco::AlbumPlan plan;
+        risco::AlbumManifest manifest, loaded;
+        std::string encoded, reencoded;
+        if (!risco::makeAlbumPlan(request, plan) || !risco::createAlbumManifest(plan, "Source", manifest) ||
+            !risco::recordAlbumProject(manifest, 0, "track-01.risco") ||
+            !serialize(manifest, encoded) || encoded.rfind("RISCO_ALBUM_V5\n", 0) != 0 ||
+            encoded.find(inscription) != std::string::npos) return false;
+        std::istringstream input(encoded);
+        if (!risco::loadAlbumManifest(input, loaded) ||
+            !(loaded.plan.request.source == request.source) ||
+            loaded.plan.request.arrangeByParts != byParts || loaded.plan.tracks != plan.tracks ||
+            !serialize(loaded, reencoded) || encoded != reencoded) return false;
+        auto wrongStem = encoded;
+        const auto end = wrongStem.find('\n', wrongStem.find("TRACK 0 "));
+        if (end == std::string::npos || wrongStem[end - 1] != '0') return false;
+        wrongStem[end - 1] = '2';
+        std::istringstream altered(wrongStem);
+        if (risco::loadAlbumManifest(altered, loaded)) return false;
+    }
+    return true;
+}
+
+bool developedSourceAlbumRoundTrip() {
+    risco::AlbumPlanRequest request;
+    request.seed = 0x741122ULL;
+    request.trackCount = 5;
+    request.profile = risco::AlbumMusicProfile::related;
+    const std::string inscription = "A rua muda de ritmo";
+    request.source = {risco::SeedTrackMaterial::text, 991,
+                      risco::seedTrackTextCue(inscription),
+                      risco::seedTrackMotif(risco::composeText(inscription))};
+    request.generatorVersion = 2;
+    risco::AlbumPlan plan;
+    risco::AlbumManifest manifest, loaded;
+    std::string encoded, reencoded;
+    if (!risco::makeAlbumPlan(request, plan) || !risco::createAlbumManifest(plan, "Returns", manifest) ||
+        !serialize(manifest, encoded) || encoded.rfind("RISCO_ALBUM_V6\n", 0) != 0)
+        return false;
+    std::istringstream input(encoded);
+    if (!risco::loadAlbumManifest(input, loaded) || loaded.plan.request.generatorVersion != 2 ||
+        loaded.plan.tracks != plan.tracks || !serialize(loaded, reencoded) || encoded != reencoded)
+        return false;
+    auto changedVersion = encoded;
+    changedVersion.replace(0, std::string("RISCO_ALBUM_V6").size(), "RISCO_ALBUM_V5");
+    std::istringstream altered(changedVersion);
+    return !risco::loadAlbumManifest(altered, loaded) && serialize(loaded, reencoded) &&
+           encoded == reencoded;
+}
 }
 
 int main() {
-    if (!checkpointsRoundTripAndResume() || !detailedManifestRoundTrip()) {
+    if (!checkpointsRoundTripAndResume() || !detailedManifestRoundTrip() ||
+        !perTrackProfileManifestRoundTrip() || !arrangedAlbumRoundTrip() ||
+        !sourceAlbumRoundTrip() || !developedSourceAlbumRoundTrip()) {
         std::cerr << "album manifest checkpoint/resume check failed\n";
         return 1;
     }

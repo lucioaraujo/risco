@@ -4,9 +4,47 @@
 
 Risco is a musical instrument for composing with text, drawings, formulas and
 generative forms. It combines a live Bytebeat and Floatbeat player, an editable
-arrangement, three independent stems, historical AY/YM synthesis, effects,
+arrangement, five independent stems for melody, harmony, bass, rhythm and
+texture, historical AY/YM synthesis, effects,
 project recovery and WAV export. Generated tracks can be reviewed before they
 are saved. Album projects and WAV renders use resumable checkpoints.
+
+## Generative albums
+
+The full track and album dialogs offer **By parts** and **Continuous** arrangements.
+By parts alternates groups of channels through an opening, development, break,
+return and ending. The full track review lists each part's bars and channels.
+**Edit parts** changes channels, length, repetition and dynamics, including
+**Arch**, which rises to the center and falls away. Saved arrangements can
+reopen this editor through the menu **Salvar → Reeditar partes da faixa salva**
+when the project still matches its recorded recipe. The text source can prompt a pause
+before the return and the drawing can shape the development's dynamics. A
+motif from the source starts in one channel and returns in another. Use **New
+seed** and **Swap A/B** in the review to compare two proposals with the same
+motif. In generation V2, medium surprise mirrors the motif's intervals on its
+return; high surprise also reverses the attack order. The opening remains the
+original motif. The **Retorno do motivo** choice defaults to Automatic, or can
+be set manually to Literal, Mirror, or Mirror + retrograde independently of
+surprise. Older V1 tracks retain their original behavior.
+
+The album planner creates up to 12 independent `.risco` projects from a
+numeric seed, the current text or the current drawing. A text or drawing
+supplies a suggested seed and a short motif that moves between melody,
+bass and texture across the album. Set an album-wide musical profile, then optionally override it
+per track with a comma-separated sequence starting at track 1: `O` for
+Original, `R` for Related, `C` for Contrasting, and `-` to use the album-wide
+profile for that track. For example, `C,R,-,O` overrides the first four
+tracks; later tracks use the album-wide profile. The plan review lists each
+track's effective profile, form, BPM and duration. For non-original profiles,
+it also lists the generated pulse, palette and surprise level before files
+are created.
+
+The `album.risco-manifest` records the plan and project/render checkpoints.
+Manifest V6 marks new text- and drawing-based albums whose returns develop by
+surprise level; V5 preserves the earlier literal motif return. Numeric albums
+use V1 to V4 according to their profile and arrangement. Choose **Resume
+projects** in the Album menu and open the album folder to continue generation
+from its manifest. WAV rendering can be resumed from the same folder.
 
 Risco is written in C++17 with JUCE 9.0.3. Its own code is licensed under
 AGPL-3.0-or-later. The audited Ayumi core remains under its MIT license in

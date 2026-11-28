@@ -7,16 +7,22 @@
 #include "AlbumRenderQueue.hpp"
 
 #include <atomic>
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <utility>
 
 class AlbumRenderJob final : public juce::ThreadWithProgressWindow {
 public:
-    AlbumRenderJob(risco::AlbumManifest initial, juce::File folder, juce::Component* parent)
-        : ThreadWithProgressWindow(juce::String::fromUTF8("Renderizar WAV do álbum"),
-                                   true, true, 10000, "Cancelar", parent),
-          manifest(std::move(initial)), directory(std::move(folder)) {
+    AlbumRenderJob(risco::AlbumManifest initial, juce::File folder, juce::Component* parent,
+                   int uiLanguage)
+        : ThreadWithProgressWindow(text(uiLanguage, "Renderizar WAV do álbum", "Render album WAVs", "Rendre les WAV de l’album", "Renderizar WAV del álbum"),
+                                   true, true, 10000,
+                                   text(uiLanguage, "Cancelar", "Cancel", "Annuler", "Cancelar"), parent),
+          manifest(std::move(initial)), directory(std::move(folder)),
+          language(std::clamp(uiLanguage, 0, 3)),
+          activityStage(text(uiLanguage, "Preparando o álbum", "Preparing album", "Préparation de l’album", "Preparando el álbum")),
+          resultMessage(text(uiLanguage, "Render de álbum interrompido.", "Album render interrupted.", "Rendu de l’album interrompu.", "Render del álbum interrumpido.")) {
         setStatusMessage(activityStage);
     }
     ~AlbumRenderJob() override { signalThreadShouldExit(); stopThread(10000); }
@@ -41,23 +47,30 @@ public:
                 setStatusMessage(stage);
                 const juce::ScopedLock lock(activityLock);
                 activityStage = stage;
-            });
+            }, language);
         resultMessage = juce::String::fromUTF8(result.message.c_str());
         wasCancelled = result.cancelled;
     }
 
     void threadComplete(bool cancelled) override {
         if (completed) completed((cancelled || wasCancelled)
-            ? juce::String::fromUTF8("Render do álbum cancelado. WAVs concluídos foram preservados.")
+            ? text(language, "Render do álbum cancelado. WAVs concluídos foram preservados.", "Album render cancelled. Completed WAVs were preserved.", "Rendu de l’album annulé. Les WAV terminés ont été conservés.", "Render del álbum cancelado. Se conservaron los WAV terminados.")
             : resultMessage);
     }
 
 private:
+    static juce::String text(int language, const char* pt, const char* en,
+                             const char* fr, const char* es) {
+        const char* values[] = {pt, en, fr, es};
+        return juce::String::fromUTF8(values[std::clamp(language, 0, 3)]);
+    }
+
     risco::AlbumManifest manifest;
     juce::File directory;
+    int language = 0;
     juce::CriticalSection activityLock;
-    juce::String activityStage = juce::String::fromUTF8("Preparando o álbum");
+    juce::String activityStage;
     std::atomic<int> activityPercent{0};
-    juce::String resultMessage = "Render de álbum interrompido.";
+    juce::String resultMessage;
     bool wasCancelled = false;
 };

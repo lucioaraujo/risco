@@ -4,6 +4,7 @@
 
 #include "Utf8.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <istream>
@@ -49,7 +50,11 @@ bool samePlan(const AlbumPlan& left, const AlbumPlan& right) noexcept {
         left.request.centerBpm != right.request.centerBpm ||
         left.request.tempoSpread != right.request.tempoSpread ||
         left.request.contour != right.request.contour ||
-        left.request.profile != right.request.profile) return false;
+        left.request.profile != right.request.profile ||
+        left.request.trackProfiles != right.request.trackProfiles ||
+        left.request.arrangeByParts != right.request.arrangeByParts ||
+        left.request.generatorVersion != right.request.generatorVersion ||
+        !(left.request.source == right.request.source)) return false;
     for (int index = 0; index < left.count; ++index)
         if (left.tracks[static_cast<size_t>(index)] != right.tracks[static_cast<size_t>(index)])
             return false;
@@ -174,15 +179,39 @@ bool recordAlbumRender(AlbumManifest& manifest, int trackIndex,
 
 bool saveAlbumManifest(std::ostream& out, const AlbumManifest& manifest) {
     if (!validManifest(manifest)) return false;
-    const bool detailed = manifest.plan.request.profile != AlbumMusicProfile::original;
+    const bool hasTrackOverrides = std::any_of(
+        manifest.plan.request.trackProfiles.begin(),
+        manifest.plan.request.trackProfiles.begin() + manifest.count,
+        [](AlbumMusicProfile profile) { return profile != AlbumMusicProfile::automatic; });
+    const bool byParts = manifest.plan.request.arrangeByParts;
+    const auto& source = manifest.plan.request.source;
+    const bool withSource = source.material != SeedTrackMaterial::none;
+    const bool perTrackProfiles = withSource || byParts || hasTrackOverrides;
+    const bool detailed = manifest.plan.request.profile != AlbumMusicProfile::original || perTrackProfiles;
+    const unsigned version = withSource ?
+        (manifest.plan.request.generatorVersion >= 2 ? AlbumManifest::schemaVersion : 5u) :
+        (byParts ? 4u : (perTrackProfiles ? 3u : (detailed ? 2u : 1u)));
     out.imbue(std::locale::classic());
-    out << "RISCO_ALBUM_V" << (detailed ? AlbumManifest::schemaVersion : 1) << '\n'
+    out << "RISCO_ALBUM_V" << version << '\n'
         << std::setprecision(17)
         << "ALBUM " << std::quoted(manifest.title) << ' '
         << manifest.plan.request.seed << ' ' << manifest.count << ' '
         << manifest.plan.request.centerBpm << ' ' << manifest.plan.request.tempoSpread << ' '
         << static_cast<unsigned>(manifest.plan.request.contour);
     if (detailed) out << ' ' << static_cast<unsigned>(manifest.plan.request.profile);
+    if (perTrackProfiles) {
+        for (int index = 0; index < manifest.count; ++index)
+            out << ' ' << static_cast<unsigned>(manifest.plan.request.trackProfiles[static_cast<size_t>(index)]);
+    }
+    if (byParts || withSource) out << (byParts ? " parts" : " continuous");
+    if (withSource) {
+        out << ' ' << static_cast<unsigned>(source.material) << ' ' << source.fingerprint
+            << ' ' << static_cast<unsigned>(source.cue) << ' ' << source.motif.count;
+        for (int i = 0; i < source.motif.count; ++i) {
+            const auto& note = source.motif.notes[static_cast<std::size_t>(i)];
+            out << ' ' << note.tick << ' ' << note.semitones;
+        }
+    }
     out << '\n';
     for (int index = 0; index < manifest.count; ++index) {
         const auto& item = manifest.tracks[static_cast<size_t>(index)];
@@ -197,6 +226,8 @@ bool saveAlbumManifest(std::ostream& out, const AlbumManifest& manifest) {
                 << ' ' << static_cast<unsigned>(item.plan.pulse) << ' '
                 << static_cast<unsigned>(item.plan.palette);
         }
+        if (withSource) out << ' ' << static_cast<unsigned>(item.plan.cue) << ' ' << item.plan.motifStem;
+        if (version >= 6) out << ' ' << item.plan.generatorVersion;
         out << '\n';
     }
     return out.good();
@@ -205,8 +236,14 @@ bool saveAlbumManifest(std::ostream& out, const AlbumManifest& manifest) {
 bool loadAlbumManifest(std::istream& in, AlbumManifest& manifest) {
     std::string line;
     if (!readLine(in, line, 32)) return false;
-    const bool detailed = line == "RISCO_ALBUM_V2";
-    if ((!detailed && line != "RISCO_ALBUM_V1") || !readLine(in, line, 512)) return false;
+    const bool withSource = line == "RISCO_ALBUM_V5" || line == "RISCO_ALBUM_V6";
+    const bool generatorV2 = line == "RISCO_ALBUM_V6";
+    bool byParts = line == "RISCO_ALBUM_V4" || line == "RISCO_ALBUM_V6";
+    const bool perTrackProfiles = withSource || byParts || line == "RISCO_ALBUM_V3";
+    const bool detailed = perTrackProfiles || line == "RISCO_ALBUM_V2";
+    if ((!detailed && line != "RISCO_ALBUM_V1") ||
+        (detailed && line != "RISCO_ALBUM_V2" && !perTrackProfiles) ||
+        !readLine(in, line, 512)) return false;
     AlbumManifest candidate;
     std::istringstream albumLine(line);
     albumLine.imbue(std::locale::classic());
@@ -214,19 +251,53 @@ bool loadAlbumManifest(std::istream& in, AlbumManifest& manifest) {
     unsigned contour = 0;
     if (!(albumLine >> line >> std::quoted(candidate.title) >> candidate.plan.request.seed >> count
           >> candidate.plan.request.centerBpm >> candidate.plan.request.tempoSpread >> contour) ||
-        line != "ALBUM" || contour > static_cast<unsigned>(AlbumTempoContour::arc))
+        line != "ALBUM" || contour > static_cast<unsigned>(AlbumTempoContour::arc) ||
+        count < 2 || count > AlbumPlan::maxTracks)
         return false;
     if (detailed) {
         unsigned profile = 0;
         if (!(albumLine >> profile) ||
-            profile < static_cast<unsigned>(AlbumMusicProfile::related) ||
+            (!perTrackProfiles && profile < static_cast<unsigned>(AlbumMusicProfile::related)) ||
             profile > static_cast<unsigned>(AlbumMusicProfile::contrasting)) return false;
         candidate.plan.request.profile = static_cast<AlbumMusicProfile>(profile);
+    }
+    if (perTrackProfiles) {
+        for (int index = 0; index < count; ++index) {
+            unsigned profile = 0;
+            if (!(albumLine >> profile) ||
+                (profile != static_cast<unsigned>(AlbumMusicProfile::automatic) &&
+                 profile > static_cast<unsigned>(AlbumMusicProfile::contrasting))) return false;
+            candidate.plan.request.trackProfiles[static_cast<size_t>(index)] =
+                static_cast<AlbumMusicProfile>(profile);
+        }
+    }
+    if (byParts || withSource) {
+        if (!(albumLine >> line) || (line != "parts" && (!withSource || line != "continuous")))
+            return false;
+        byParts = line == "parts";
+    }
+    if (withSource) {
+        auto& source = candidate.plan.request.source;
+        unsigned material = 0, cue = 0;
+        if (!(albumLine >> material >> source.fingerprint >> cue >> source.motif.count) ||
+            material < static_cast<unsigned>(SeedTrackMaterial::text) ||
+            material > static_cast<unsigned>(SeedTrackMaterial::drawing) ||
+            cue > static_cast<unsigned>(SeedTrackCue::fall) ||
+        source.motif.count < 1 || source.motif.count > int(source.motif.notes.size()))
+            return false;
+        source.material = static_cast<SeedTrackMaterial>(material);
+        source.cue = static_cast<SeedTrackCue>(cue);
+        for (int i = 0; i < source.motif.count; ++i) {
+            auto& note = source.motif.notes[static_cast<std::size_t>(i)];
+            if (!(albumLine >> note.tick >> note.semitones)) return false;
+        }
     }
     if (!complete(albumLine)) return false;
     candidate.count = count;
     candidate.plan.request.trackCount = count;
     candidate.plan.request.contour = static_cast<AlbumTempoContour>(contour);
+    candidate.plan.request.arrangeByParts = byParts;
+    candidate.plan.request.generatorVersion = generatorV2 ? 2 : 1;
     if (!makeAlbumPlan(candidate.plan.request, candidate.plan) || candidate.plan.count != count)
         return false;
 
@@ -252,8 +323,23 @@ bool loadAlbumManifest(std::istream& in, AlbumManifest& manifest) {
             item.plan.pulse = static_cast<SeedTrackPulse>(pulse);
             item.plan.palette = static_cast<SeedTrackPalette>(palette);
         }
+        if (withSource) {
+            unsigned cue = 0;
+            if (!(trackLine >> cue >> item.plan.motifStem) ||
+                cue > static_cast<unsigned>(SeedTrackCue::fall)) return false;
+            item.plan.source = candidate.plan.request.source;
+            item.plan.cue = static_cast<SeedTrackCue>(cue);
+            item.plan.generatorVersion = candidate.plan.request.generatorVersion;
+        }
+        if (generatorV2) {
+            int generatorVersion = 0;
+            if (!(trackLine >> generatorVersion) || generatorVersion != 2) return false;
+            item.plan.generatorVersion = generatorVersion;
+        }
         if (!complete(trackLine)) return false;
         item.plan.durationBars = bars;
+        item.plan.profile = candidate.plan.tracks[static_cast<size_t>(index)].profile;
+        item.plan.arrangeByParts = byParts;
         item.state = static_cast<AlbumTrackState>(state);
         item.hasMeasurements = measurements == 1;
         if (item.plan != candidate.plan.tracks[static_cast<size_t>(index)]) return false;

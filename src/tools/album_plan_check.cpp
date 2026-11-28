@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <sstream>
 
@@ -53,8 +54,8 @@ bool contourAndTrackGeneration() {
         risco::Song generated;
         if (!risco::generateAlbumTrack(first, 2, generated) ||
             generated.bpm != first.tracks[2].bpm ||
-            generated.placementCount != first.tracks[2].durationBars / 4 * 3 ||
-            generated.cellCount != generated.placementCount) { std::cerr << "track output " << generated.bpm << ' ' << first.tracks[2].bpm << ' ' << generated.cellCount << ' ' << generated.placementCount << ' ' << first.tracks[2].durationBars << '\n'; return false; }
+            generated.placementCount != first.tracks[2].durationBars / 4 * risco::Song::stemCount ||
+            generated.cellCount != generated.placementCount) return false;
     }
     return true;
 }
@@ -98,7 +99,12 @@ bool musicallyDistinctTracksAreReproducible() {
             track.palette == contrasting.tracks[i - 1].palette ||
             track.pulse == contrasting.tracks[i - 1].pulse)) return false;
 
-        risco::Song generated, alternate, legacy;
+        auto generatedStorage = std::make_unique<risco::Song>();
+        auto alternateStorage = std::make_unique<risco::Song>();
+        auto legacyStorage = std::make_unique<risco::Song>();
+        auto& generated = *generatedStorage;
+        auto& alternate = *alternateStorage;
+        auto& legacy = *legacyStorage;
         if (!risco::generateAlbumTrack(contrasting, index, generated) ||
             !risco::generateAlbumTrack(repeated, index, alternate) ||
             !risco::generateAlbumTrack(original, index, legacy) ||
@@ -129,6 +135,109 @@ bool musicallyDistinctTracksAreReproducible() {
         }
     }
     return timbres.size() == 3;
+}
+
+bool perTrackProfilesAreAppliedDeterministically() {
+    risco::AlbumPlanRequest request;
+    request.seed = 0x1c2d3e4fULL;
+    request.trackCount = 5;
+    request.profile = risco::AlbumMusicProfile::contrasting;
+    request.trackProfiles[1] = risco::AlbumMusicProfile::original;
+    request.trackProfiles[2] = risco::AlbumMusicProfile::related;
+    request.trackProfiles[3] = risco::AlbumMusicProfile::contrasting;
+
+    risco::AlbumPlan first, second;
+    if (!risco::makeAlbumPlan(request, first) ||
+        !risco::makeAlbumPlan(request, second) || first.tracks != second.tracks ||
+        first.tracks[0].profile != risco::AlbumMusicProfile::contrasting ||
+        first.tracks[1].profile != risco::AlbumMusicProfile::original ||
+        first.tracks[2].profile != risco::AlbumMusicProfile::related ||
+        first.tracks[3].profile != risco::AlbumMusicProfile::contrasting ||
+        first.tracks[4].profile != risco::AlbumMusicProfile::contrasting ||
+        first.tracks[1].form != risco::SeedTrackForm::original ||
+        first.tracks[2].form == risco::SeedTrackForm::original) return false;
+
+    auto invalid = request;
+    invalid.trackProfiles[5] = risco::AlbumMusicProfile::related;
+    const auto preserved = first;
+    if (risco::makeAlbumPlan(invalid, first) || first.tracks != preserved.tracks ||
+        first.count != preserved.count) return false;
+    return true;
+}
+
+bool sharedDrawingMotifChangesVoice() {
+    risco::Inscription drawing;
+    drawing.count = 1;
+    auto& stroke = drawing.strokes.front();
+    stroke.count = 5;
+    stroke.points[0] = {0.0f, 0.8f};
+    stroke.points[1] = {0.2f, 0.6f};
+    stroke.points[2] = {0.4f, 0.4f};
+    stroke.points[3] = {0.6f, 0.5f};
+    stroke.points[4] = {1.0f, 0.1f};
+    risco::AlbumPlanRequest request;
+    request.seed = 0x122b1;
+    request.trackCount = 4;
+    request.profile = risco::AlbumMusicProfile::contrasting;
+    request.arrangeByParts = true;
+    request.source = {risco::SeedTrackMaterial::drawing, 733, risco::seedTrackDrawingCue(drawing),
+                      risco::seedTrackMotif(risco::compose(drawing))};
+    risco::AlbumPlan plan;
+    if (request.source.cue != risco::SeedTrackCue::rise || request.source.motif.count < 2 ||
+        !risco::makeAlbumPlan(request, plan)) return false;
+    const int stems[] = {0, 2, 4, 0};
+    for (int index = 0; index < plan.count; ++index) {
+        const auto& track = plan.tracks[static_cast<std::size_t>(index)];
+        auto song = std::make_unique<risco::Song>();
+        if (track.motifStem != stems[index] ||
+            track.cue != (index == 1 ? risco::SeedTrackCue::fall : risco::SeedTrackCue::rise) ||
+            !risco::generateAlbumTrack(plan, index, *song) ||
+            !risco::albumTrackMatchesProject(track, *song)) return false;
+        const risco::Cell* opening = nullptr;
+        for (int i = 0; i < song->placementCount; ++i) {
+            const auto& placement = song->grid[static_cast<std::size_t>(i)];
+            if (placement.startBeat == 0 && placement.stem == track.motifStem) {
+                opening = risco::findCell(*song, placement.cellId);
+                break;
+            }
+        }
+        if (!opening || opening->formulaEvents.count != request.source.motif.count) return false;
+        const auto& notes = opening->formulaEvents.notes;
+        for (int i = 0; i < request.source.motif.count; ++i) {
+            const auto n = static_cast<std::size_t>(i);
+            const auto movement = std::lround(12.0 * std::log2(notes[n].frequency / notes[0].frequency));
+            if (movement != request.source.motif.notes[n].semitones) return false;
+        }
+    }
+    return true;
+}
+
+bool sourceMotifUsesDevelopedGeneratorInNewAlbums() {
+    risco::AlbumPlanRequest request;
+    request.seed = 0x1190abULL;
+    request.trackCount = 5;
+    request.generatorVersion = 2;
+    request.profile = risco::AlbumMusicProfile::contrasting;
+    const std::string text = "Uma linha abre, outra retorna";
+    request.source = {risco::SeedTrackMaterial::text, 117,
+                      risco::seedTrackTextCue(text),
+                      risco::seedTrackMotif(risco::composeText(text))};
+    risco::AlbumPlan plan, repeated;
+    if (!risco::makeAlbumPlan(request, plan) || !risco::makeAlbumPlan(request, repeated) ||
+        plan.tracks != repeated.tracks) return false;
+    for (int index = 0; index < plan.count; ++index) {
+        risco::Song generated;
+        if (plan.tracks[static_cast<size_t>(index)].generatorVersion != 2 ||
+            !risco::generateAlbumTrack(plan, index, generated) ||
+            !risco::albumTrackMatchesProject(plan.tracks[static_cast<size_t>(index)], generated))
+            return false;
+        bool recordsGeneratorV2 = false;
+        for (int cell = 0; cell < generated.cellCount; ++cell)
+            recordsGeneratorV2 |= generated.bank[static_cast<size_t>(cell)].formulaOrigin.sourceId ==
+                                  "risco.track.seed.v8";
+        if (!recordsGeneratorV2) return false;
+    }
+    return true;
 }
 }
 
@@ -167,7 +276,9 @@ int main(int argc, char** argv) {
         return 2;
     }
     if (!contourAndTrackGeneration() || !invalidRequestsAreTransactional() ||
-        !musicallyDistinctTracksAreReproducible()) {
+        !musicallyDistinctTracksAreReproducible() ||
+        !perTrackProfilesAreAppliedDeterministically() || !sharedDrawingMotifChangesVoice() ||
+        !sourceMotifUsesDevelopedGeneratorInNewAlbums()) {
         std::cerr << "album plan determinism/contour validation failed\n";
         return 1;
     }

@@ -3,10 +3,11 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 namespace risco {
-struct Point { float x = 0.0f, y = 0.0f; };
+struct Point { float x = 0.0f, y = 0.0f, pressure = -1.0f; };
 struct Stroke {
     std::array<Point, 128> points{};
     int count = 0;
@@ -75,5 +76,9 @@ struct CellPlan {
 Sequence compose(const Inscription& inscription) noexcept;
 Sequence composeText(const std::string& text) noexcept;
 Sequence composeInput(const Inscription& inscription) noexcept;
+// Deterministic, bounded continuation for live AUTO playback; variation 0 is the source.
+Sequence deriveLiveVariation(const Sequence& source, std::uint64_t seed,
+                            std::uint32_t variation, double bpm,
+                            float amount = 1.0f) noexcept;
 Sequence arrange(const Sequence& source, CellPlan plan) noexcept;
 }

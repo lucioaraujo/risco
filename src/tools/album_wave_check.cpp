@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 namespace {
@@ -21,15 +22,15 @@ bool renderAlbumWavesAndCheckTransactions(const juce::File& directory) {
     if (!risco::makeAlbumPlan(request, plan) ||
         !risco::createAlbumManifest(plan, "Wave file check", manifest)) return false;
 
-    risco::Song first;
-    if (!risco::generateAlbumTrack(plan, 0, first)) return false;
-    const auto firstPlayback = risco::prepareSongPlayback(first);
+    auto first = std::make_unique<risco::Song>();
+    if (!risco::generateAlbumTrack(plan, 0, *first)) return false;
+    const auto firstPlayback = risco::prepareSongPlayback(*first);
     const auto protectedTarget = directory.getChildFile("protected.wav");
     if (!protectedTarget.replaceWithText("keep")) return false;
     int cancelChecks = 0;
     risco::app::AlbumWaveMetrics unused;
     std::string error;
-    const bool cancelledWrite = risco::app::renderAlbumWav24(first, firstPlayback,
+    const bool cancelledWrite = risco::app::renderAlbumWav24(*first, firstPlayback,
         protectedTarget, 0, [&cancelChecks] { return ++cancelChecks > 1; }, {}, unused, error);
     if (cancelledWrite || protectedTarget.getSize() != 4 ||
         protectedTarget.loadFileAsString() != juce::String("keep"))
@@ -37,14 +38,14 @@ bool renderAlbumWavesAndCheckTransactions(const juce::File& directory) {
     protectedTarget.deleteFile();
 
     for (int index = 0; index < plan.count; ++index) {
-        risco::Song song;
-        if (!risco::generateAlbumTrack(plan, index, song)) return false;
-        const auto playback = risco::prepareSongPlayback(song);
+        auto song = std::make_unique<risco::Song>();
+        if (!risco::generateAlbumTrack(plan, index, *song)) return false;
+        const auto playback = risco::prepareSongPlayback(*song);
         const auto target = directory.getChildFile("track-" + juce::String(index + 1).paddedLeft('0', 2) + ".wav");
         risco::app::AlbumWaveMetrics metrics;
         double lastProgress = 0.0;
         bool progressMonotonic = true;
-        if (!risco::app::renderAlbumWav24(song, playback, target, index, {},
+        if (!risco::app::renderAlbumWav24(*song, playback, target, index, {},
                 [&lastProgress, &progressMonotonic](double progress) {
                     if (progress < lastProgress) progressMonotonic = false;
                     lastProgress = progress;

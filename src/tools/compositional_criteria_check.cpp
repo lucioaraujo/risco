@@ -421,7 +421,7 @@ static bool checkPhraseTakes() {
     while (song->cellCount < int(song->bank.size()))
         if (!risco::storeGeneratedCell(*song,1234,0,"Fill",{},6)) return false;
     const auto fullNext = song->nextCellId;
-    if (risco::storePhraseTake(*song,*recipe) || song->cellCount != 64 ||
+    if (risco::storePhraseTake(*song,*recipe) || song->cellCount != int(risco::Song::bankCapacity) ||
         song->nextCellId != fullNext || song->preferredTakeId != takeId || song->placementCount != 1) return false;
     return true;
 }
@@ -437,7 +437,8 @@ int main() {
     song->masterGain = 0.72f;
     song->interStemResponse = 9;
     song->formulaMetricGrouping = 1;
-    song->stemRole = {{risco::CellRole::bass, risco::CellRole::melody, risco::CellRole::harmony}};
+    song->stemRole = {{risco::CellRole::bass, risco::CellRole::melody, risco::CellRole::harmony,
+                       risco::CellRole::pulse, risco::CellRole::texture}};
     if (!risco::placeCell(*song, {id, 0, risco::CellSpan::bar, 7, 0, 0, 0})) return 2;
 
     std::stringstream stream;
@@ -1156,7 +1157,7 @@ int main() {
         connectedLoaded.timbreMode != 6 || connectedLoaded.historicalAyTexture != 1 ||
         connectedLoaded.historicalAyNoisePeriod != 7 || connectedLoaded.historicalAyEnvelope != 3 ||
         connectedLoaded.historicalAyEnvelopeRamp != 0.25f ||
-        connectedLoaded.stemMeter != std::array<int,3>{{3,5,8}} ||
+        connectedLoaded.stemMeter != std::array<int,risco::Song::stemCount>{{3,5,8,0,0}} ||
         connectedLoaded.bank[0].phraseSectionBars != risco::PhraseSectionBars{{1,2,3,4}}) return 304;
     auto compatibleV61 = historicalFile.str();
     compatibleV61.replace(0, std::string("RISCO_SONG_V65").size(), "RISCO_SONG_V61");
@@ -1184,7 +1185,7 @@ int main() {
     removeInputGestureCurveFields(compatibleV61);
     std::istringstream compatibleV61File(compatibleV61);
     if (!risco::loadSong(compatibleV61File, connectedLoaded) ||
-        connectedLoaded.stemMeter != std::array<int,3>{{3,5,8}} ||
+        connectedLoaded.stemMeter != std::array<int,risco::Song::stemCount>{{3,5,8,0,0}} ||
         connectedLoaded.bank[0].phraseSectionBars != risco::PhraseSectionBars{{1,2,3,4}} ||
         connectedLoaded.responseMemory != 0 || connectedLoaded.responseSectionIntent != std::array<int,4>{}) return 312;
     auto compatibleV59 = historicalFile.str();
@@ -1199,7 +1200,7 @@ int main() {
     if (!risco::loadSong(compatibleV59File, connectedLoaded) ||
         connectedLoaded.historicalAyTexture != 0 || connectedLoaded.historicalAyNoisePeriod != 16 ||
         connectedLoaded.historicalAyEnvelope != 0 || connectedLoaded.historicalAyEnvelopeRamp != 0.5f ||
-        connectedLoaded.stemMeter != std::array<int,3>{} ||
+        connectedLoaded.stemMeter != std::array<int,risco::Song::stemCount>{} ||
         connectedLoaded.bank[0].phraseSectionBars != risco::PhraseSectionBars{{1,1,1,1}}) return 307;
     auto incompatibleV58 = historicalFile.str();
     incompatibleV58.replace(0, std::string("RISCO_SONG_V65").size(), "RISCO_SONG_V58");
@@ -1772,7 +1773,8 @@ int main() {
     v44Text.replace(0, std::string("RISCO_SONG_V65").size(), "RISCO_SONG_V44");
     removeFilterRecord(v44Text);
     std::istringstream oldFilter(v44Text);
-    if (!risco::loadSong(oldFilter, connectedLoaded) || connectedLoaded.stemFilterCutoff != std::array<float,3>{}) return 211;
+    if (!risco::loadSong(oldFilter, connectedLoaded) ||
+        connectedLoaded.stemFilterCutoff != std::array<float,risco::Song::stemCount>{}) return 211;
     for (const char* bad : {"FILTER -1 80 16000", "FILTER 1 80 16000", "FILTER 0 80 16001", "FILTER nan 80 16000", "FILTER 0 80", "FILTER 0 80 16000 extra"}) {
         auto text = filterFile.str();
         const auto start = text.find("FILTER ");
@@ -1824,7 +1826,9 @@ int main() {
     const auto reverbRecord = oldMixText.find("REVERB ");
     oldMixText.erase(reverbRecord, oldMixText.find('\n', reverbRecord) - reverbRecord + 1);
     std::istringstream oldMix(oldMixText);
-    if (!risco::loadSong(oldMix, connectedLoaded) || connectedLoaded.stemReverbMix != std::array<float,3>{{0.25f,0.25f,0.25f}}) return 221;
+    const bool oldMixLoaded = risco::loadSong(oldMix, connectedLoaded);
+    if (!oldMixLoaded || connectedLoaded.stemReverbMix !=
+        std::array<float,risco::Song::stemCount>{{0.25f,0.25f,0.25f,0,0}}) return 221;
     for (const char* bad : {"REVERB -0.1 0.25 0.6", "REVERB 0 0.25 0.61", "REVERB nan 0.25 0.6", "REVERB 0 0.25", "REVERB 0 0.25 0.6 extra"}) {
         auto text = roomMixFile.str();
         const auto start = text.find("REVERB ");
@@ -1891,7 +1895,8 @@ int main() {
     }
     oldDecay.replace(decayRecordStart, decayRecordEnd - decayRecordStart, oldRecord);
     std::istringstream v46(oldDecay);
-    if (!risco::loadSong(v46, connectedLoaded) || connectedLoaded.stemReverbDecay != std::array<float,3>{} ||
+    if (!risco::loadSong(v46, connectedLoaded) ||
+        connectedLoaded.stemReverbDecay != std::array<float,risco::Song::stemCount>{} ||
         connectedLoaded.stemReverbMix != mixedSong->stemReverbMix) return 232;
     for (const char* bad : {"REVERB 0.25 0.25 0.6 -1 0.25 3", "REVERB 0.25 0.25 0.6 0.1 0.25 3", "REVERB 0.25 0.25 0.6 0 0.25 3.1", "REVERB 0.25 0.25 0.6 0 nan 3", "REVERB 0.25 0.25 0.6 0 0.25"}) {
         auto text = decayFile.str();

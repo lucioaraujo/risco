@@ -153,7 +153,7 @@ Sequence interpretInput(const Sequence& source, int mode, float strength,
             if (mode == 1 || mode == 3) { note.start = i * step; note.duration = step * 0.75; }
             if (mode == 2 || mode == 3) note.frequency = 220;
             if (mode == 1 || mode == 2) note.gain = 0.16f;
-            note.role = VoiceRole::lead;
+            if (mode != 0) note.role = VoiceRole::lead;
         }
         if (strength < 1) {
             const auto& original = source.notes[static_cast<size_t>(i)];
@@ -206,6 +206,22 @@ Sequence compose(const Inscription& input) noexcept {
         const auto& stroke = input.strokes[static_cast<size_t>(i)];
         if (stroke.count < 2) continue;
         const int points = std::clamp(stroke.count, 0, 128);
+        const auto smoothPressure = [&stroke, points](int index) noexcept {
+            constexpr int weights[5]{1, 2, 3, 2, 1};
+            float weighted = 0.0f;
+            int totalWeight = 0;
+            for (int offset = -2; offset <= 2; ++offset) {
+                const int at = index + offset;
+                if (at < 0 || at >= points) continue;
+                const auto& sample = stroke.points[static_cast<size_t>(at)];
+                const float value = sample.pressure >= 0.0f && sample.pressure <= 1.0f
+                    ? sample.pressure : 1.0f - sample.y;
+                const int weight = weights[offset + 2];
+                weighted += value * float(weight);
+                totalWeight += weight;
+            }
+            return totalWeight > 0 ? weighted / float(totalWeight) : 0.5f;
+        };
         double previousDerivative = 0.0, memory = 0.0;
         double derivativeSum = 0.0, curvatureSum = 0.0;
         for (int p = 1; p < points; ++p) {
@@ -231,8 +247,13 @@ Sequence compose(const Inscription& input) noexcept {
                 + 0.15 * curvatureSum / divisor, -3.0, 3.0);
         const double duration = durations[static_cast<size_t>(i)];
         const int bar = progressionGroup(i);
+        double horizontalPosition = 0.0;
+        for (int p = 0; p < points; ++p)
+            horizontalPosition += stroke.points[static_cast<size_t>(p)].x;
+        horizontalPosition /= points;
+        const double strokeOnset = std::max(0.0, cursor + (horizontalPosition - 0.5) * duration * 0.4);
         if (!stroke.crossed && groupStarts[static_cast<size_t>(bar)] < 0.0)
-            groupStarts[static_cast<size_t>(bar)] = cursor;
+            groupStarts[static_cast<size_t>(bar)] = strokeOnset;
         const int contourNotes = std::clamp((points + 14) / 16, 1, 4);
         if (!stroke.crossed) {
             for (int event = 0; event < contourNotes &&
@@ -244,7 +265,8 @@ Sequence compose(const Inscription& input) noexcept {
                 const auto& point = stroke.points[static_cast<size_t>(pointIndex)];
                 const auto& before = stroke.points[static_cast<size_t>(std::max(0, pointIndex - 1))];
                 const auto& after = stroke.points[static_cast<size_t>(std::min(points - 1, pointIndex + 1))];
-                const double localSlope = std::clamp(double(after.y - before.y), -1.0, 1.0);
+                const double localSlope = std::clamp(double(after.y - before.y) -
+                    0.35 * double(after.x - before.x), -1.0, 1.0);
                 const int contourDegree = static_cast<int>(std::lround(
                     (1.0 - std::clamp(double(point.y), 0.0, 1.0)) * 7.0));
                 const int inflection = static_cast<int>(std::lround(
@@ -257,11 +279,14 @@ Sequence compose(const Inscription& input) noexcept {
                 const float pulseDuty = static_cast<float>(std::clamp(
                     0.25 + 0.08 * memory + 0.12 * localSlope
                         + 0.10 * curvatureSum / divisor, 0.125, 0.5));
+                const float gesturePressure = smoothPressure(pointIndex);
+                const float pressure = std::clamp(0.10f + 0.16f * gesturePressure +
+                    0.025f * float(std::abs(memory)), 0.10f, 0.26f);
                 const double eventDuration = duration / contourNotes;
                 result.notes[static_cast<size_t>(result.count++)] = {
-                    cursor + event * eventDuration, eventDuration * 0.72,
+                    strokeOnset + event * eventDuration, eventDuration * 0.72,
                     440.0 * std::pow(2.0, (midi - 69) / 12.0),
-                    static_cast<float>(std::clamp(0.17 + 0.03 * memory, 0.12, 0.22)),
+                    pressure,
                     VoiceRole::lead, pulseDuty};
             }
         }
@@ -302,6 +327,11 @@ Sequence composeText(const std::string& text) noexcept {
     int previous = 0;
     std::size_t offset = 0;
     std::uint32_t symbol = 0;
+    const auto seed = formulaSeedFromText(text);
+    const auto& palette = harmonicPalettes[paletteForDrawingSeed(seed)];
+    const int root = rootForDrawingSeed(seed);
+    int phrase = 0;
+    bool phraseStart = true;
     while (offset < text.size()) {
         if (!nextUtf8(text, offset, symbol)) continue;
         if (symbol >= 0x300u && symbol <= 0x36fu) {
@@ -315,29 +345,58 @@ Sequence composeText(const std::string& text) noexcept {
         if (symbol == ' ' || symbol == '\t' || symbol == 0xa0u) {
             cursor += 0.18;
             previous = 0;
+            phraseStart = true;
             continue;
         }
         if (symbol == '.' || symbol == ',' || symbol == ';' || symbol == ':' ||
             symbol == '!' || symbol == '?' || symbol == 0x2014u || symbol == 0x2026u) {
             cursor += symbol == '.' || symbol == 0x2026u ? 0.38 : 0.22;
             previous = 0;
+            phraseStart = true;
             continue;
         }
         const int value = static_cast<int>(symbol);
-        const int interval = previous == 0 ? 0 : ((value - previous) % 13 + 13) % 13 - 6;
-        const int midi = std::clamp(55 + ((value * 7 + (value >> 2)) % 19) + interval, 48, 84);
+        const int section = phrase % int(palette.progression.size());
+        const int degree = (value + int((seed >> 17u) & 7u) +
+                            palette.progression[static_cast<std::size_t>(section)]) % 7;
+        const int contour = previous == 0 ? 0 : ((value - previous) % 3 + 3) % 3;
+        const int midi = std::clamp(root + palette.intervals[static_cast<std::size_t>(degree)] +
+                                    (contour == 2 ? 12 : 0), 48, 84);
         const double duration = 0.22 + double((value >> 1) % 4) * 0.045;
+        if (phraseStart && result.count <= int(result.notes.size()) - 4) {
+            const int chordDegree = palette.progression[static_cast<std::size_t>(section)];
+            const auto chordPitch = [&palette, root, chordDegree](int interval) {
+                const int degree = chordDegree + interval;
+                return root + degree / 7 * 12 + palette.intervals[static_cast<std::size_t>(degree % 7)];
+            };
+            const int chordRoot = chordPitch(0);
+            const double chordDuration = std::clamp(duration * 4.0, 0.55, 1.4);
+            result.notes[static_cast<std::size_t>(result.count++)] = {
+                cursor, chordDuration, 440.0 * std::exp2(double(chordRoot - 12 - 69) / 12.0),
+                0.075f, VoiceRole::bass, 0.25f};
+            result.notes[static_cast<std::size_t>(result.count++)] = {
+                cursor, chordDuration, 440.0 * std::exp2(double(chordPitch(2) - 69) / 12.0),
+                0.045f, VoiceRole::harmony, 0.25f};
+            result.notes[static_cast<std::size_t>(result.count++)] = {
+                cursor, chordDuration, 440.0 * std::exp2(double(chordPitch(4) - 69) / 12.0),
+                0.035f, VoiceRole::harmony, 0.25f};
+            ++phrase;
+        }
         if (result.count < int(result.notes.size())) {
             result.notes[static_cast<size_t>(result.count++)] = {
                 cursor, duration * 0.88,
-                440.0 * std::pow(2.0, (midi - 69) / 12.0),
+                440.0 * std::exp2(double(midi - 69) / 12.0),
                 0.16f + float(value % 4) * 0.012f,
                 VoiceRole::lead, 0.125f + float(value % 4) * 0.125f};
         }
         cursor += duration;
         previous = value;
+        phraseStart = false;
     }
     result.end = std::max(cursor, 0.18);
+    for (int i = 0; i < result.count; ++i)
+        result.end = std::max(result.end, result.notes[static_cast<std::size_t>(i)].start +
+                                         result.notes[static_cast<std::size_t>(i)].duration);
     return result;
 }
 
@@ -347,6 +406,147 @@ Sequence composeInput(const Inscription& inscription) noexcept {
         if (inscription.strokes[static_cast<size_t>(i)].count >= 2)
             return compose(inscription);
     return composeText(inscription.ascii);
+}
+
+Sequence deriveLiveVariation(const Sequence& source, std::uint64_t seed,
+                            std::uint32_t variation, double bpm, float amount) noexcept {
+    amount = std::clamp(std::isfinite(amount) ? amount : 1.0f, 0.0f, 1.0f);
+    if (variation == 0 || amount <= 0.0f || source.count <= 0 || source.end <= 0.0) return source;
+    Sequence result = source;
+    const unsigned mode = (variation - 1u) % 8u;
+    const auto randomFor = [seed, variation](std::uint32_t index) noexcept {
+        std::uint64_t value = seed ^ (std::uint64_t(variation) * 0x9e3779b97f4a7c15ULL)
+            ^ (std::uint64_t(index) * 0xbf58476d1ce4e5b9ULL);
+        value ^= value >> 30u;
+        value *= 0xbf58476d1ce4e5b9ULL;
+        value ^= value >> 27u;
+        value *= 0x94d049bb133111ebULL;
+        value ^= value >> 31u;
+        return value;
+    };
+    const auto midiOf = [](double frequency) noexcept {
+        return 69.0 + 12.0 * std::log2(std::max(1.0, frequency) / 440.0);
+    };
+    if (mode == 3) {
+        for (int i = 0; i < result.count; ++i) {
+            auto& note = result.notes[static_cast<size_t>(i)];
+            note.start = std::clamp(source.end - note.start - note.duration, 0.0,
+                                    std::max(0.0, source.end - note.duration));
+        }
+    } else if (mode == 4) {
+        const auto& palette = harmonicPalettes[paletteForDrawingSeed(seed)];
+        const int root = rootForDrawingSeed(seed);
+        const int degreeShift = 1 + int(randomFor(0) % 3u);
+        for (int i = 0; i < result.count; ++i) {
+            auto& note = result.notes[static_cast<size_t>(i)];
+            if (note.frequency <= 0.0) continue;
+            const int original = static_cast<int>(std::lround(midiOf(note.frequency)));
+            int bestMidi = original;
+            int bestDistance = 1000;
+            for (int octave = -2; octave <= 2; ++octave) {
+                for (int degree = 0; degree < 7; ++degree) {
+                    const int candidate = root + octave * 12 + palette.intervals[static_cast<size_t>(degree)]
+                        + palette.progression[static_cast<size_t>((i + degreeShift) % palette.progression.size())];
+                    const int distance = std::abs(candidate - original);
+                    if (distance < bestDistance) { bestDistance = distance; bestMidi = candidate; }
+                }
+            }
+            note.frequency = 440.0 * std::exp2(double(bestMidi - 69) / 12.0);
+        }
+    } else if (mode == 0 || mode == 1 || mode == 6) {
+        double mean = 0.0;
+        int pitched = 0;
+        double firstPitch = 60.0;
+        for (int i = 0; i < result.count; ++i) {
+            const auto& note = source.notes[static_cast<size_t>(i)];
+            if (note.frequency > 0.0) {
+                const double pitch = midiOf(note.frequency);
+                if (pitched == 0) firstPitch = pitch;
+                mean += pitch;
+                ++pitched;
+            }
+        }
+        const double anchor = pitched > 0 ? mean / pitched : 60.0;
+        for (int i = 0; i < result.count; ++i) {
+            auto& note = result.notes[static_cast<size_t>(i)];
+            if (note.frequency > 0.0 && (mode != 6 || (randomFor(static_cast<std::uint32_t>(i)) & 3u) != 0u)) {
+                const double original = midiOf(note.frequency);
+                const double reflected = mode == 0 ? 2.0 * anchor - original
+                    : mode == 1 ? 2.0 * firstPitch - original
+                    : mode == 6 ? anchor + (anchor - original) : original;
+                note.frequency = 440.0 * std::exp2((std::clamp(reflected, 36.0, 88.0) - 69.0) / 12.0);
+            }
+            if (mode == 6 && (randomFor(static_cast<std::uint32_t>(i)) % 5u) == 0u)
+                note.gain *= 0.35f;
+        }
+        if (mode == 6) {
+            const int originalCount = result.count;
+            for (int i = 0; i < originalCount && result.count < int(result.notes.size()); ++i) {
+                if (randomFor(static_cast<std::uint32_t>(i) + 0x100u) % 7u != 0u) continue;
+                auto echo = result.notes[static_cast<size_t>(i)];
+                echo.start = std::min(source.end - echo.duration,
+                    echo.start + std::max(0.035, 15.0 / std::clamp(bpm, 40.0, 240.0)));
+                echo.gain *= 0.55f;
+                result.notes[static_cast<size_t>(result.count++)] = echo;
+            }
+        }
+    } else if (mode == 7) {
+        const auto& palette = harmonicPalettes[paletteForDrawingSeed(seed)];
+        const int root = rootForDrawingSeed(seed);
+        const double beat = 60.0 / std::clamp(std::isfinite(bpm) ? bpm : 120.0, 40.0, 240.0);
+        const int additions = 3 + int(randomFor(0) % 5u);
+        for (int i = 0; i < additions; ++i) {
+            const auto random = randomFor(static_cast<std::uint32_t>(i) + 0x200u);
+            const double grid = beat * 0.25;
+            const double start = std::min(std::max(0.0, source.end - grid),
+                std::floor((double(random % 4096u) / 4096.0) * source.end / grid) * grid);
+            const int degree = int((random >> 16u) % 7u);
+            const int octave = int((random >> 24u) % 3u) - 1;
+            const int midi = root + octave * 12 + palette.intervals[static_cast<size_t>(degree)];
+            const auto role = (i % 4 == 0) ? VoiceRole::bass
+                : (i % 3 == 0) ? VoiceRole::harmony : VoiceRole::lead;
+            Note event{start, std::min(grid * (1.0 + double((random >> 32u) & 3u)), source.end - start),
+                440.0 * std::exp2(double(midi - 69) / 12.0),
+                0.035f + float((random >> 40u) & 7u) * 0.006f, role,
+                0.125f + float((random >> 48u) & 3u) * 0.125f};
+            if (result.count < int(result.notes.size()))
+                result.notes[static_cast<size_t>(result.count++)] = event;
+            // Keep the source intact when the bounded event buffer is full.
+        }
+    } else {
+        const double beat = 60.0 / std::clamp(std::isfinite(bpm) ? bpm : 120.0, 40.0, 240.0);
+        for (int i = 0; i < result.count; ++i) {
+            auto& note = result.notes[static_cast<size_t>(i)];
+            const auto random = randomFor(static_cast<std::uint32_t>(i));
+            const int direction = (random & 1u) == 0u ? -1 : 1;
+            const double displacement = (mode == 5 ? 0.125 : 0.0625) * beat * direction;
+            if ((random & 3u) != 0u)
+                note.start = std::clamp(note.start + displacement, 0.0,
+                                        std::max(0.0, source.end - note.duration));
+            if (mode == 2 && (random & 7u) == 0u)
+                note.duration = std::max(0.025, note.duration * 0.55);
+            if (mode == 5 && (random & 7u) == 0u)
+                note.gain = std::min(0.24f, note.gain * 1.12f);
+        }
+    }
+    const int sourceCount = std::min(source.count, result.count);
+    for (int i = 0; i < sourceCount; ++i) {
+        auto& varied = result.notes[static_cast<size_t>(i)];
+        const auto& original = source.notes[static_cast<size_t>(i)];
+        varied.start = original.start + (varied.start - original.start) * amount;
+        varied.duration = original.duration + (varied.duration - original.duration) * amount;
+        varied.gain = original.gain + (varied.gain - original.gain) * amount;
+        if (original.frequency > 0.0 && varied.frequency > 0.0)
+            varied.frequency = std::exp(std::log(original.frequency) +
+                (std::log(varied.frequency) - std::log(original.frequency)) * amount);
+    }
+    for (int i = sourceCount; i < result.count; ++i)
+        result.notes[static_cast<size_t>(i)].gain *= amount;
+    std::sort(result.notes.begin(), result.notes.begin() + result.count,
+        [](const Note& a, const Note& b) { return a.start < b.start; });
+    result.end = source.end;
+    result.repeatPeriod = source.repeatPeriod;
+    return result;
 }
 
 Sequence arrange(const Sequence& source, CellPlan plan) noexcept {

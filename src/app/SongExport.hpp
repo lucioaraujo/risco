@@ -53,7 +53,7 @@ public:
             if (!renderFile(*playback, target, tasks > 1 ? task : selectedStem, task, tasks)) return;
             ++finishedFiles;
         }
-        result = tasks > 1 ? "Tres stems exportados em: " + file.getParentDirectory().getFullPathName()
+        result = tasks > 1 ? "Cinco canais exportados em: " + file.getParentDirectory().getFullPathName()
                            : "WAV exportado: " + file.getFullPathName();
         result += summaries;
         setProgress(1.0);

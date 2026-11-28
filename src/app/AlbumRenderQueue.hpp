@@ -19,6 +19,7 @@ AlbumRenderQueueResult runAlbumRenderQueue(
     AlbumManifest& manifest, const juce::File& directory,
     const std::function<bool()>& shouldCancel = {},
     const std::function<void(double)>& progress = {},
-    const std::function<void(const std::string&)>& status = {});
+    const std::function<void(const std::string&)>& status = {},
+    int language = 0);
 
 } // namespace risco::app
