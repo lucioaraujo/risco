@@ -2,7 +2,15 @@
 
 Static release website in Portuguese, English, French and Spanish. It has an
 instrument introduction, a first-composition tutorial, stable release
-downloads, step-by-step installation pages, authorship and license links.\nThe four homepages describe the current main branch's five channels and generative\ntrack/album workflow, while distinguishing those features from the stable 0.1.0 downloads.
+downloads, step-by-step installation pages, authorship and license links.
+
+The four homepages describe the current main branch's five channels and
+generative track and album workflow, while distinguishing those features from
+the stable 0.1.0 downloads. They show `assets/risco-main-en-1920.jpg`, an
+English capture of the current interface. The earlier stable-release capture,
+`assets/risco-1920.jpg`, remains preserved but is no longer used on the
+homepages.
+
 Each language page links to the Linux `.deb`, AppImage and user-local
 `.tar.gz`, plus the Windows and macOS ZIP archives of `v0.1.0`.
 
@@ -13,16 +21,3 @@ checks passed in GitHub Actions run
 `https://github.com/lucioaraujo/risco/actions/runs/45873627861`. Windows and
 macOS were built and tested in CI but not manually opened on personal devices;
 personal audio, devices and interface behavior remain for author evaluation.
-
-The four homepages share `style.css` and show the same 1920×1006 capture
-from the 0.1.0 interface in English. The English tutorial explains how to
-switch the main controls and help to English.
-
-The RASGO family strip links back to the portal in the page's language.
-The site uses the original pixel wordmark from `resources/RiscoPixelLogo.svg`
-and the approved asymmetric-wave icons from `resources/icons/`. The web
-copies are in `assets/identity/`. Every page declares the SVG, PNG and ICO
-favicons and the Apple touch icon. The wordmark appears in the header and
-on each home page.
-The repository's GitHub Pages workflow publishes the site. The general
-RASGO portal uses its own publication process.
